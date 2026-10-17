@@ -12,6 +12,7 @@ import com.workmates.common.security.CurrentUser;
 import com.workmates.common.security.JwtService;
 import com.workmates.common.security.Role;
 import com.workmates.profile.service.ProfileRegistrationService;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -60,6 +61,10 @@ public class AccountService {
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Passwords do not match");
         }
+        // BCrypt rejects more than 72 bytes, and a non-ASCII character takes several bytes
+        if (request.getPassword().getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "Password is too long");
+        }
         if (users.existsByEmailIgnoreCase(email)) {
             throw new BusinessException(ErrorCode.EMAIL_TAKEN);
         }
@@ -72,8 +77,12 @@ public class AccountService {
 
         try {
             user = users.saveAndFlush(user);
-        } catch (DataIntegrityViolationException duplicate) {
-            throw new BusinessException(ErrorCode.EMAIL_TAKEN);
+        } catch (DataIntegrityViolationException e) {
+            // Two people registering the same email at once pass the check above; only the unique index stops the second
+            if (e.getMostSpecificCause().getMessage().contains("uk_users_email")) {
+                throw new BusinessException(ErrorCode.EMAIL_TAKEN);
+            }
+            throw e;
         }
         // Must succeed within the same transaction as account creation.
         profiles.createEmpty(user.getId(), user.getRole(), user.getName(), user.getEmail());
