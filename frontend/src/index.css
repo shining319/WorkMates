@@ -1,0 +1,137 @@
+@import 'tailwindcss';
+
+/* Inter 可变字体（400–700），文件在 src/assets/fonts。按字符范围分两个文件，浏览器只下载用到的。 */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/Inter-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+    U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('./assets/fonts/Inter-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212,
+    U+2215, U+FEFF, U+FFFD;
+}
+
+/* 设计 token，取自设计稿（Notion 风格）。组件只用这些 token，不写具体数值。 */
+@theme {
+  --color-primary: #0075de;
+  --color-primary-hover: #0068c6;
+  --color-primary-pressed: #005bab;
+  --color-on-primary: #ffffff;
+
+  /* 深靛蓝，只用在首页横幅 */
+  --color-night: #213183;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f5f4;
+  --color-text: #31302e;
+  --color-text-strong: rgb(0 0 0 / 0.95);
+  --color-text-muted: #615d59;
+  --color-text-faint: #a39e98;
+  --color-border: #e6e6e6;
+  --color-border-input: #dddddd;
+
+  --color-success: #1aae39;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fdecec;
+  --color-danger-text: #a61b1b;
+  --color-info-bg: #e6f1fc;
+
+  --font-sans:
+    'Inter', -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;
+
+  /* 圆角：输入框 4、列表行 5、按钮和横幅 8、卡片 12、弹窗 16 */
+  --radius-xs: 4px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* 阴影：先用 1px 描边，只有"抬起"的卡片（登录注册卡片）才加这个阴影 */
+  --shadow-card:
+    rgb(0 0 0 / 0.01) 0 0.175px 1.041px, rgb(0 0 0 / 0.02) 0 0.8px 2.925px,
+    rgb(0 0 0 / 0.027) 0 2.025px 7.847px, rgb(0 0 0 / 0.04) 0 4px 18px;
+
+  /* 字号。每档带行高、字间距、字重，用法：className="text-h2" */
+  --text-display: 64px;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -2.125px;
+  --text-display--font-weight: 700;
+  --text-h1: 40px;
+  --text-h1--line-height: 1.1;
+  --text-h1--letter-spacing: -1px;
+  --text-h1--font-weight: 700;
+  --text-h2: 26px;
+  --text-h2--line-height: 1.23;
+  --text-h2--letter-spacing: -0.625px;
+  --text-h2--font-weight: 700;
+  --text-h3: 22px;
+  --text-h3--line-height: 1.27;
+  --text-h3--letter-spacing: -0.25px;
+  --text-h3--font-weight: 700;
+  --text-title: 20px;
+  --text-title--line-height: 1.4;
+  --text-title--letter-spacing: -0.125px;
+  --text-title--font-weight: 600;
+  --text-body-sm: 15px;
+  --text-body-sm--line-height: 1.33;
+  --text-caption: 14px;
+  --text-caption--line-height: 1.43;
+  --text-eyebrow: 12px;
+  --text-eyebrow--line-height: 1.33;
+  --text-eyebrow--letter-spacing: 0.125px;
+  --text-eyebrow--font-weight: 600;
+
+  /* 首页标题的"逐字翻倒"动画：每个字的延迟不同，见 LandingPage */
+  --animate-domino: domino 6.5s cubic-bezier(0.55, 0, 0.45, 1) infinite both;
+  @keyframes domino {
+    0%,
+    6% {
+      transform: rotate(0);
+    }
+    16% {
+      transform: rotate(82deg);
+    }
+    52% {
+      transform: rotate(82deg);
+    }
+    64% {
+      transform: rotate(-10deg);
+    }
+    69% {
+      transform: rotate(4deg);
+    }
+    73%,
+    100% {
+      transform: rotate(0);
+    }
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-surface-muted font-sans text-text antialiased;
+    font-feature-settings: 'lnum', 'locl';
+  }
+  h1,
+  h2,
+  h3 {
+    @apply text-text-strong;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}

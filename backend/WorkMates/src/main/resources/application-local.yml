@@ -1,0 +1,15 @@
+# Local development defaults. Set the matching environment variable to override any of them.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/workmates}
+    username: ${DB_USERNAME:workmates}
+    password: ${DB_PASSWORD:workmates}   # dev-only; the prod profile has no default
+
+jwt:
+  # Dev-only key and lifetime, committed on purpose. The prod profile has no defaults.
+  secret: ${JWT_SECRET:ZtMv/eQ6/4ubL0YHluxG64d35CvqdW0rDeN2WtTHVbA=}
+  ttl: ${JWT_TTL:7d}
+
+logging:
+  level:
+    com.workmates: DEBUG

@@ -1,0 +1,21 @@
+package com.workmates.account.dto;
+
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+
+@Schema(description = "Login request body")
+public class LoginRequest {
+    @NotBlank
+    @Schema(description = "Registered email address", example = "alex@student.tus.ie",
+        requiredMode = Schema.RequiredMode.REQUIRED)
+    private String email;
+
+    @NotBlank
+    @Schema(description = "Account password", format = "password", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String password;
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email == null ? null : email.trim(); }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+}
