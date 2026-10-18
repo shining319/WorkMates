@@ -1,0 +1,113 @@
+name: Deploy
+
+# A PR merged into test lands here as a push
+on:
+  push:
+    branches: [test]
+
+permissions:
+  contents: read
+  packages: write   # lets GITHUB_TOKEN push images to ghcr.io
+
+# Never deploy in parallel; a second merge waits for the first
+concurrency:
+  group: deploy-test
+  cancel-in-progress: false
+
+jobs:
+  # The two test jobs are copied from ci.yml so this file stands alone
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend/WorkMates
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: chmod +x mvnw   # Windows submitting may result in the loss of the executable bit
+      - run: ./mvnw -B -ntp test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  push-images:
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: backend/WorkMates
+          file: deploy/backend.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/shining319/workmates-backend:latest
+            ghcr.io/shining319/workmates-backend:${{ github.sha }}
+          # Links the package to this repo, so GITHUB_TOKEN may push to it again next time
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,scope=backend,mode=max
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .   # repo root: nginx.conf is in deploy/, outside frontend/
+          file: deploy/frontend.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/shining319/workmates-frontend:latest
+            ghcr.io/shining319/workmates-frontend:${{ github.sha }}
+          labels: org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,scope=frontend,mode=max
+
+  deploy:
+    needs: push-images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Copy docker-compose.yml to the VPS
+        uses: appleboy/scp-action@ff85246acaad7bdce478db94a363cd2bf7c90345 # v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: deploy/docker-compose.yml
+          target: /opt/workmates
+          strip_components: 1
+      - name: Pull images and restart changed containers
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            cd /opt/workmates
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
