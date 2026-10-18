@@ -1,6 +1,9 @@
 import { createBrowserRouter } from 'react-router'
 import { AppLayout } from './layouts/AppLayout'
 import { PublicLayout } from './layouts/PublicLayout'
+import { LandingPage } from '../features/auth/pages/LandingPage'
+import { LoginPage } from '../features/auth/pages/LoginPage'
+import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { PlaceholderPage } from './PlaceholderPage'
 import { RequireRole } from './RequireRole'
 
@@ -20,9 +23,9 @@ export const router = createBrowserRouter([
     // 不用登录就能看的页面
     element: <PublicLayout />,
     children: [
-      { path: '/', element: <PlaceholderPage title="WorkMates" /> },
-      { path: '/login', element: <PlaceholderPage title="Log in" /> },
-      { path: '/register', element: <PlaceholderPage title="Register" /> },
+      { path: '/', element: <LandingPage /> },
+      { path: '/login', element: <LoginPage /> },
+      { path: '/register', element: <RegisterPage /> },
     ],
   },
   {
@@ -37,6 +40,10 @@ export const router = createBrowserRouter([
             element: <RequireRole allowed="STUDENT" />,
             children: [
               { path: '/jobs', element: <PlaceholderPage title="Jobs" /> },
+              {
+                path: '/profile',
+                element: <PlaceholderPage title="Profile" />,
+              },
             ],
           },
           {
@@ -46,6 +53,10 @@ export const router = createBrowserRouter([
               {
                 path: '/postings',
                 element: <PlaceholderPage title="My postings" />,
+              },
+              {
+                path: '/employer/profile',
+                element: <PlaceholderPage title="Employer profile" />,
               },
             ],
           },

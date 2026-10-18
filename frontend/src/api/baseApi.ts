@@ -5,6 +5,7 @@ import {
   type FetchArgs,
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
+import { toast } from 'sonner'
 import { logout, type AuthState } from '../features/auth/authSlice'
 import type { ApiError, Result } from './types'
 
@@ -59,7 +60,7 @@ function toApiError(error: FetchBaseQueryError): ApiError {
  *    如果是分页结果，就返回 `{ items, page }`。
  * 2. 请求失败：统一转成 `ApiError`（见上面的 `toApiError`）。
  * 3. 401 且 errorCode 是 `UNAUTHORIZED`（令牌无效或过期）：自动退出登录。
- *    之后 `RequireRole` 发现没有令牌，会把用户送到 /login。
+ *    之后 `RequireRole` 发现没有令牌，会把用户送到 /login，并弹出后端给的提示 "Please log in again."。
  *    401 但 errorCode 是 `BAD_CREDENTIALS`（密码错）不在这里处理，交给登录表单显示。
  *
  * `BaseQueryFn<请求参数, 成功时的数据, 失败时的错误>` 只是声明这个函数的输入输出类型，
@@ -76,6 +77,8 @@ const baseQuery: BaseQueryFn<string | FetchArgs, unknown, ApiError> = async (
     const error = toApiError(result.error)
     if (error.status === 401 && error.errorCode === 'UNAUTHORIZED') {
       api.dispatch(logout())
+      // 固定 id：几个请求同时过期时，只显示一条提示。
+      toast.info(error.errorMsg, { id: 'session-expired' })
     }
     return { error, meta: result.meta }
   }
