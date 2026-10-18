@@ -3,15 +3,17 @@ import {
   fetchBaseQuery,
   type BaseQueryFn,
   type FetchArgs,
-  type FetchBaseQueryMeta,
+  type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react'
 import { logout, type AuthState } from '../features/auth/authSlice'
 import type { ApiError, Result } from './types'
 
+// RTK Query 自带的请求函数：基础地址是 /api，并给每个请求带上登录令牌。
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api',
   prepareHeaders: (headers, { getState }) => {
-    // Cast instead of importing RootState from the store, which would be circular.
+    // 这里不能从 store.ts 引入 RootState：store.ts 引入了本文件，会形成循环引用。
+    // 所以只把 state 当作"带 auth 的对象"来读。
     const token = (getState() as { auth: AuthState }).auth.token
     if (token) {
       headers.set('Authorization', `Bearer ${token}`)
@@ -23,39 +25,56 @@ const rawBaseQuery = fetchBaseQuery({
 const FALLBACK_MESSAGE = 'Something went wrong. Please try again.'
 
 /**
- * Wraps `fetchBaseQuery` (architecture §9.3):
- * - success returns `data`, or `{ items, page }` for paged results;
- * - failure returns an `ApiError`, also for network errors and non-JSON replies;
- * - 401 `UNAUTHORIZED` logs the user out. `RequireRole` then sends them to /login.
- *   A 401 `BAD_CREDENTIALS` is left to the login form.
+ * 把 RTK Query 的各种错误统一成我们自己的 `ApiError`，页面只需要处理这一种形状。
+ * 后端返回的错误是 `Result` 格式，里面有 errorCode 和 errorMsg。
+ * 网络断开、代理返回 502、返回的不是 JSON，这几种情况没有 errorCode，用 null 和兜底文案。
  */
-const baseQuery: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  ApiError,
-  object,
-  FetchBaseQueryMeta
-> = async (args, api, extraOptions) => {
+function toApiError(error: FetchBaseQueryError): ApiError {
+  // 取 HTTP 状态码：正常情况下 status 就是数字。
+  // 返回的不是 JSON 时，status 是字符串 'PARSING_ERROR'，真正的状态码在 originalStatus 里。
+  // 其他情况（如网络断开）没有状态码，记为 0。
+  let status = 0
+  if (typeof error.status === 'number') {
+    status = error.status
+  } else if (error.status === 'PARSING_ERROR') {
+    status = error.originalStatus
+  }
+
+  // 只有后端按 Result 格式返回时，error.data 才是对象，才能读到 errorCode 和 errorMsg。
+  const body =
+    typeof error.data === 'object' && error.data !== null
+      ? (error.data as Partial<Result<unknown>>)
+      : undefined
+
+  return {
+    status,
+    errorCode: body?.errorCode ?? null,
+    errorMsg: body?.errorMsg ?? FALLBACK_MESSAGE,
+  }
+}
+
+/**
+ * 在 `fetchBaseQuery` 外再包一层（架构文档 §9.3），做三件事：
+ * 1. 请求成功：后端的响应都是 `Result` 格式，这里把里面的 `data` 取出来。
+ *    如果是分页结果，就返回 `{ items, page }`。
+ * 2. 请求失败：统一转成 `ApiError`（见上面的 `toApiError`）。
+ * 3. 401 且 errorCode 是 `UNAUTHORIZED`（令牌无效或过期）：自动退出登录。
+ *    之后 `RequireRole` 发现没有令牌，会把用户送到 /login。
+ *    401 但 errorCode 是 `BAD_CREDENTIALS`（密码错）不在这里处理，交给登录表单显示。
+ *
+ * `BaseQueryFn<请求参数, 成功时的数据, 失败时的错误>` 只是声明这个函数的输入输出类型，
+ * 后面两个泛型参数用不到，所以没写。
+ */
+const baseQuery: BaseQueryFn<string | FetchArgs, unknown, ApiError> = async (
+  args,
+  api,
+  extraOptions,
+) => {
   const result = await rawBaseQuery(args, api, extraOptions)
 
   if (result.error) {
-    const e = result.error
-    const status =
-      typeof e.status === 'number'
-        ? e.status
-        : e.status === 'PARSING_ERROR'
-          ? e.originalStatus
-          : 0
-    const body =
-      typeof e.data === 'object' && e.data !== null
-        ? (e.data as Partial<Result<unknown>>)
-        : undefined
-    const error: ApiError = {
-      status,
-      errorCode: body?.errorCode ?? null,
-      errorMsg: body?.errorMsg ?? FALLBACK_MESSAGE,
-    }
-    if (status === 401 && error.errorCode === 'UNAUTHORIZED') {
+    const error = toApiError(result.error)
+    if (error.status === 401 && error.errorCode === 'UNAUTHORIZED') {
       api.dispatch(logout())
     }
     return { error, meta: result.meta }
@@ -66,10 +85,12 @@ const baseQuery: BaseQueryFn<
   return { data, meta: result.meta }
 }
 
+// 所有接口共用这一个 api 对象。各功能用 `baseApi.injectEndpoints` 往里加自己的接口，
+// 例子见 features/auth/api.ts。
 export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery,
-  // Add a tag here when the feature that uses it is built.
+  // 标签用来在数据变化后让相关查询自动重新请求。哪个功能用到，就在这里加哪个标签。
   tagTypes: ['Me'],
   endpoints: () => ({}),
 })

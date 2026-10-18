@@ -1,6 +1,7 @@
 const TOKEN_KEY = 'token'
 
-// localStorage can throw (private window, blocked site data), so every call is guarded.
+// localStorage 是浏览器自带的存储，刷新页面后数据还在。
+// 但它有时会抛错（无痕窗口、用户屏蔽了网站数据），所以每次读写都用 try/catch 包起来。
 
 export function readToken(): string | null {
   try {
@@ -18,6 +19,6 @@ export function saveToken(token: string | null) {
       localStorage.removeItem(TOKEN_KEY)
     }
   } catch {
-    // Storage is unavailable; the user stays logged in until the page is closed.
+    // 存储不可用时不报错，用户在关闭页面之前仍保持登录。
   }
 }
