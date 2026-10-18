@@ -1,0 +1,18 @@
+# Copied to /opt/workmates on the VPS by the deploy workflow.
+# Both ports bind to loopback only: the host Nginx is the only way in.
+# Roll back one service: BACKEND_TAG=<old commit sha> docker compose up -d backend
+services:
+  backend:
+    image: ghcr.io/shining319/workmates-backend:${BACKEND_TAG:-latest}
+    ports:
+      - "127.0.0.1:8082:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # reach PostgreSQL on the host
+    env_file: .env
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/shining319/workmates-frontend:${FRONTEND_TAG:-latest}
+    ports:
+      - "127.0.0.1:8081:80"
+    restart: unless-stopped
