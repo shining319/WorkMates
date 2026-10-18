@@ -1,4 +1,4 @@
-/** Mirrors the backend `ErrorCode` enum (architecture §5.5). Keep both in step. */
+/** 和后端的 `ErrorCode` 枚举一一对应（架构文档 §5.5）。两边要一起改。 */
 export type ErrorCode =
   | 'VALIDATION_FAILED'
   | 'INVALID_EMAIL_DOMAIN'
@@ -21,7 +21,7 @@ export type ErrorCode =
   | 'ALREADY_REVIEWED'
   | 'INTERNAL_ERROR'
 
-/** `page` is 0-based. */
+/** 分页信息。`page` 从 0 开始。 */
 export interface PageInfo {
   page: number
   size: number
@@ -29,7 +29,10 @@ export interface PageInfo {
   totalPages: number
 }
 
-/** The body of every backend response (architecture §5.4). */
+/**
+ * 后端每个响应的外层格式（架构文档 §5.4）。
+ * `<T>` 是泛型：表示 `data` 的类型由使用的地方决定，比如 `Result<User>` 的 data 就是 User。
+ */
 export interface Result<T> {
   success: boolean
   data: T
@@ -38,15 +41,15 @@ export interface Result<T> {
   page: PageInfo | null
 }
 
-/** What a paged endpoint returns after `baseQuery` has unwrapped the `Result`. */
+/** 分页接口经 `baseQuery` 去掉 `Result` 外壳后，页面拿到的就是这个形状。 */
 export interface Paged<T> {
   items: T[]
   page: PageInfo
 }
 
 /**
- * The error shape of every RTK Query call. `errorCode` is null when the
- * response did not come from our backend (network failure, proxy error).
+ * RTK Query 里所有请求失败后，错误都是这个形状。
+ * `errorCode` 为 null 表示响应不是来自我们的后端（网络断开、代理出错等）。
  */
 export interface ApiError {
   status: number
@@ -54,6 +57,12 @@ export interface ApiError {
   errorMsg: string
 }
 
+/**
+ * 判断一个未知的错误是不是 `ApiError`。
+ * 返回类型 `value is ApiError` 叫"类型守卫"：函数返回 true 时，
+ * TypeScript 就会把调用处的变量当作 `ApiError` 来检查，之后可以直接读 `.errorCode` 等字段。
+ * 例子见 shared/lib/fieldErrorMap.ts。
+ */
 export function isApiError(value: unknown): value is ApiError {
   return (
     typeof value === 'object' &&

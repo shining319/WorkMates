@@ -1,4 +1,4 @@
-/** Stands in for a page until its feature is built. */
+/** 功能还没做时，用它临时占位。做好真正的页面后，在 router.tsx 里替换掉。 */
 export function PlaceholderPage({ title }: { title: string }) {
   return (
     <div>
