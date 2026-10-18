@@ -1,6 +1,6 @@
 import { baseApi } from '../../api/baseApi'
 import { setUser } from './authSlice'
-import type { User } from './types'
+import type { AuthResult, LoginRequest, RegisterRequest, User } from './types'
 
 // 往 baseApi 里加认证相关的接口。其他功能照这个写法，各自一个 api.ts。
 export const authApi = baseApi.injectEndpoints({
@@ -23,8 +23,15 @@ export const authApi = baseApi.injectEndpoints({
         }
       },
     }),
+    // 注册：会修改数据的请求用 build.mutation。成功后由页面调用 setCredentials 保存令牌和用户。
+    register: build.mutation<AuthResult, RegisterRequest>({
+      query: (body) => ({ url: '/auth/register', method: 'POST', body }),
+    }),
+    login: build.mutation<AuthResult, LoginRequest>({
+      query: (body) => ({ url: '/auth/login', method: 'POST', body }),
+    }),
   }),
 })
 
 // RTK Query 根据接口名自动生成 hook：getMe -> useGetMeQuery。组件里直接用这个 hook。
-export const { useGetMeQuery } = authApi
+export const { useGetMeQuery, useRegisterMutation, useLoginMutation } = authApi
