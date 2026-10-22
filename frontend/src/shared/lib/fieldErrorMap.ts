@@ -13,7 +13,8 @@ const fieldByErrorCode: Partial<Record<ErrorCode, string>> = {
   INVALID_EMAIL_DOMAIN: 'email',
   STUDENT_EMAIL_FOR_EMPLOYER: 'email',
   BAD_CREDENTIALS: 'root.server', // 不属于某个字段，是整个表单的错误
-  TIME_SLOT_INVALID: 'slots',
+  // 时间段列表整体的错误（RHF 的字段数组用 .root 存放整组的错误）
+  TIME_SLOT_INVALID: 'timeSlots.root',
 }
 
 /**
