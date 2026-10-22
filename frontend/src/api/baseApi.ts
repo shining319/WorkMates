@@ -94,6 +94,7 @@ export const baseApi = createApi({
   reducerPath: 'api',
   baseQuery,
   // 标签用来在数据变化后让相关查询自动重新请求。哪个功能用到，就在这里加哪个标签。
-  tagTypes: ['Me'],
+  // JobList 现在还没有人读，学生保存档案时先让它失效，职位列表做的时候直接接上。
+  tagTypes: ['Me', 'StudentProfile', 'EmployerProfile', 'JobList'],
   endpoints: () => ({}),
 })
