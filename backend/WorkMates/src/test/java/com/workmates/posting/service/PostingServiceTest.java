@@ -1,6 +1,8 @@
 package com.workmates.posting.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,25 +11,33 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.workmates.application.dto.PostingCounts;
+import com.workmates.application.service.ApplicationQueryService;
 import com.workmates.common.BusinessException;
 import com.workmates.common.ErrorCode;
 import com.workmates.common.timeslot.TimeSlotDto;
+import com.workmates.posting.dto.PostingDetailResponse;
 import com.workmates.posting.dto.PostingRequest;
 import com.workmates.posting.dto.PostingResponse;
 import com.workmates.posting.entity.Area;
+import com.workmates.posting.entity.CloseReason;
 import com.workmates.posting.entity.JobType;
 import com.workmates.posting.entity.Posting;
 import com.workmates.posting.entity.PostingStatus;
 import com.workmates.posting.repository.PostingRepository;
+import com.workmates.profile.entity.EmployerProfile;
 import com.workmates.profile.entity.Tag;
+import com.workmates.profile.repository.EmployerProfileRepository;
 import com.workmates.profile.repository.TagRepository;
 import com.workmates.profile.service.TagService;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,17 +46,46 @@ import org.mockito.ArgumentCaptor;
 
 class PostingServiceTest {
     private static final Long EMPLOYER_ID = 5L;
+    private static final Long POSTING_ID = 42L;
     private static final Validator VALIDATOR = Validation.buildDefaultValidatorFactory().getValidator();
 
     private final PostingRepository postings = mock(PostingRepository.class);
     private final TagRepository tagRepository = mock(TagRepository.class);
-    private final PostingService service = new PostingService(postings, new TagService(tagRepository));
+    private final ApplicationQueryService applications = mock(ApplicationQueryService.class);
+    private final EmployerProfileRepository employers = mock(EmployerProfileRepository.class);
+    private final PostingService service =
+            new PostingService(postings, new TagService(tagRepository), applications, employers);
 
     @BeforeEach
     void setUp() {
         when(postings.save(any(Posting.class))).thenAnswer(inv -> inv.getArgument(0));
         when(tagRepository.findByNameIn(any())).thenReturn(List.of());
         when(tagRepository.save(any(Tag.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(applications.countsOf(POSTING_ID)).thenReturn(PostingCounts.empty(POSTING_ID));
+    }
+
+    /** A posting owned by {@link #EMPLOYER_ID} that both lookups find. */
+    private Posting existingPosting(PostingStatus status) {
+        Posting posting = new Posting();
+        posting.setId(POSTING_ID);
+        posting.setEmployerId(EMPLOYER_ID);
+        posting.setTitle("Old title");
+        posting.setJobType(JobType.FULL_TIME);
+        posting.setHourlyRate(new BigDecimal("10.00"));
+        posting.setWeeklyHours(new BigDecimal("2"));
+        posting.setArea(Area.LIMERICK);
+        posting.setAddress("Old address");
+        posting.setHeadcount(3);
+        posting.setStatus(status);
+        posting.getTags().add(new Tag("old tag"));
+        posting.getTimeSlots().add(slot(DayOfWeek.MONDAY, "09:00", "11:00").toSlot());
+        when(postings.findByIdForUpdate(POSTING_ID)).thenReturn(Optional.of(posting));
+        when(postings.findById(POSTING_ID)).thenReturn(Optional.of(posting));
+        return posting;
+    }
+
+    private void hired(long hired, long inProgress) {
+        when(applications.countsOf(POSTING_ID)).thenReturn(new PostingCounts(POSTING_ID, hired, inProgress, 0L));
     }
 
     private static TimeSlotDto slot(DayOfWeek day, String start, String end) {
@@ -218,6 +257,186 @@ class PostingServiceTest {
 
         assertEquals(DayOfWeek.TUESDAY, response.getTimeSlots().get(0).getDay());
         assertEquals(DayOfWeek.FRIDAY, response.getTimeSlots().get(1).getDay());
+    }
+
+    // ---------- detail ----------
+
+    @Test
+    void detailHasEmployerAndCounts() {
+        existingPosting(PostingStatus.CLOSED);
+        EmployerProfile employer = new EmployerProfile();
+        employer.setDisplayName("Brew & Co");
+        employer.setBio("Coffee shop");
+        when(employers.findById(EMPLOYER_ID)).thenReturn(Optional.of(employer));
+        when(applications.countsOf(POSTING_ID)).thenReturn(new PostingCounts(POSTING_ID, 1L, 3L, 2L));
+
+        PostingDetailResponse detail = service.get(POSTING_ID);
+
+        assertEquals("Old title", detail.getTitle());
+        assertEquals(PostingStatus.CLOSED, detail.getStatus());
+        assertEquals("Brew & Co", detail.getEmployerName());
+        assertEquals("Coffee shop", detail.getEmployerBio());
+        assertEquals(1, detail.getHiredCount());
+        assertEquals(3, detail.getInProgressCount());
+        assertEquals(2, detail.getAutoRejectedCount());
+    }
+
+    @Test
+    void detailOfAMissingPostingIsNotFound() {
+        when(postings.findById(POSTING_ID)).thenReturn(Optional.empty());
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.get(POSTING_ID));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+    }
+
+    // ---------- update ----------
+
+    @Test
+    void updateReplacesFieldsTagsAndSlotsOfAnOpenPosting() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+
+        PostingResponse response = service.update(EMPLOYER_ID, POSTING_ID, request());
+
+        assertEquals("Barista", posting.getTitle());
+        assertEquals(JobType.PART_TIME, posting.getJobType());
+        assertEquals(Area.ATHLONE, posting.getArea());
+        assertEquals(2, posting.getHeadcount());
+        assertEquals(PostingStatus.OPEN, posting.getStatus());
+        assertEquals(List.of("customer service", "english"), response.getTags().stream().map(t -> t.getName()).toList());
+        assertEquals(1, response.getTimeSlots().size());
+        assertEquals(DayOfWeek.WEDNESDAY, response.getTimeSlots().get(0).getDay());
+    }
+
+    @Test
+    void updateOfAMissingPostingIsNotFound() {
+        when(postings.findByIdForUpdate(POSTING_ID)).thenReturn(Optional.empty());
+
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> service.update(EMPLOYER_ID, POSTING_ID, request()));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+    }
+
+    @Test
+    void updateByAnotherEmployerIsNotFoundAndChangesNothing() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> service.update(EMPLOYER_ID + 1, POSTING_ID, request()));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+        assertEquals("Old title", posting.getTitle());
+    }
+
+    @Test
+    void closedPostingCannotBeEdited() {
+        Posting posting = existingPosting(PostingStatus.CLOSED);
+
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> service.update(EMPLOYER_ID, POSTING_ID, request()));
+
+        assertEquals(ErrorCode.POSTING_NOT_EDITABLE, e.getCode());
+        assertEquals("Old title", posting.getTitle());
+    }
+
+    @Test
+    void headcountBelowTheHiredCountIsRejectedWithTheCount() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+        hired(3, 0);
+        PostingRequest r = request();
+        r.setHeadcount(2);
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.update(EMPLOYER_ID, POSTING_ID, r));
+
+        assertEquals(ErrorCode.HEADCOUNT_BELOW_FILLED, e.getCode());
+        assertEquals("Headcount cannot be lower than the current Accepted + Completed count (3)", e.getMessage());
+        assertEquals("Old title", posting.getTitle());
+        assertEquals(3, posting.getHeadcount());
+    }
+
+    @Test
+    void headcountEqualToTheHiredCountIsAllowedAndKeepsThePostingOpen() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+        hired(2, 1);
+
+        service.update(EMPLOYER_ID, POSTING_ID, request());
+
+        assertEquals(2, posting.getHeadcount());
+        assertEquals(PostingStatus.OPEN, posting.getStatus());
+    }
+
+    @Test
+    void headcountAboveTheHiredCountIsAllowed() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+        hired(1, 0);
+        PostingRequest r = request();
+        r.setHeadcount(10);
+
+        service.update(EMPLOYER_ID, POSTING_ID, r);
+
+        assertEquals(10, posting.getHeadcount());
+    }
+
+    @Test
+    void updateWithInvalidSlotsChangesNothing() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+        PostingRequest r = request();
+        r.setWeeklyHours(new BigDecimal("4.5"));
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.update(EMPLOYER_ID, POSTING_ID, r));
+
+        assertEquals(ErrorCode.WEEKLY_HOURS_EXCEED_SLOTS, e.getCode());
+        assertEquals("Old title", posting.getTitle());
+        assertEquals(1, posting.getTags().size());
+        assertEquals(DayOfWeek.MONDAY.getValue(), posting.getTimeSlots().get(0).getDayOfWeek());
+    }
+
+    // ---------- close ----------
+
+    @Test
+    void closeSetsClosedManualAndTheCloseTime() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+        Instant before = Instant.now();
+
+        PostingResponse response = service.close(EMPLOYER_ID, POSTING_ID);
+
+        assertEquals(PostingStatus.CLOSED, posting.getStatus());
+        assertEquals(CloseReason.MANUAL, posting.getCloseReason());
+        assertNotNull(posting.getClosedAt());
+        assertFalse(posting.getClosedAt().isBefore(before));
+        assertEquals(PostingStatus.CLOSED, response.getStatus());
+        assertEquals(CloseReason.MANUAL, response.getCloseReason());
+    }
+
+    @Test
+    void closingAClosedPostingIsRejected() {
+        Posting posting = existingPosting(PostingStatus.CLOSED);
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.close(EMPLOYER_ID, POSTING_ID));
+
+        assertEquals(ErrorCode.POSTING_NOT_EDITABLE, e.getCode());
+        assertNull(posting.getCloseReason());
+        assertNull(posting.getClosedAt());
+    }
+
+    @Test
+    void closeByAnotherEmployerIsNotFoundAndLeavesThePostingOpen() {
+        Posting posting = existingPosting(PostingStatus.OPEN);
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.close(EMPLOYER_ID + 1, POSTING_ID));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+        assertEquals(PostingStatus.OPEN, posting.getStatus());
+    }
+
+    @Test
+    void closeOfAMissingPostingIsNotFound() {
+        when(postings.findByIdForUpdate(POSTING_ID)).thenReturn(Optional.empty());
+
+        BusinessException e = assertThrows(BusinessException.class, () -> service.close(EMPLOYER_ID, POSTING_ID));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
     }
 
     // ---------- request field rules ----------

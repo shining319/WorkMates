@@ -46,26 +46,31 @@ public class PostingResponse {
 
     public static PostingResponse from(Posting posting) {
         PostingResponse response = new PostingResponse();
-        response.id = posting.getId();
-        response.employerId = posting.getEmployerId();
-        response.title = posting.getTitle();
-        response.jobType = posting.getJobType();
-        response.hourlyRate = posting.getHourlyRate();
-        response.weeklyHours = posting.getWeeklyHours();
-        response.area = posting.getArea();
-        response.address = posting.getAddress();
-        response.description = posting.getDescription();
-        response.headcount = posting.getHeadcount();
-        response.status = posting.getStatus();
-        response.closeReason = posting.getCloseReason();
-        response.closedAt = posting.getClosedAt();
-        response.createdAt = posting.getCreatedAt();
-        response.tags = posting.getTags().stream()
+        response.copyFrom(posting);
+        return response;
+    }
+
+    /** Copies the posting's fields. Subclasses call it to add their own fields on top. */
+    protected void copyFrom(Posting posting) {
+        id = posting.getId();
+        employerId = posting.getEmployerId();
+        title = posting.getTitle();
+        jobType = posting.getJobType();
+        hourlyRate = posting.getHourlyRate();
+        weeklyHours = posting.getWeeklyHours();
+        area = posting.getArea();
+        address = posting.getAddress();
+        description = posting.getDescription();
+        headcount = posting.getHeadcount();
+        status = posting.getStatus();
+        closeReason = posting.getCloseReason();
+        closedAt = posting.getClosedAt();
+        createdAt = posting.getCreatedAt();
+        tags = posting.getTags().stream()
                 .sorted(Comparator.comparing(Tag::getName)).map(TagResponse::from).toList();
-        response.timeSlots = posting.getTimeSlots().stream()
+        timeSlots = posting.getTimeSlots().stream()
                 .sorted(Comparator.comparingInt(TimeSlot::getDayOfWeek).thenComparingInt(TimeSlot::getStartMinute))
                 .map(TimeSlotDto::from).toList();
-        return response;
     }
 
     public Long getId() { return id; }
