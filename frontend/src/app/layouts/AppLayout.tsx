@@ -26,14 +26,24 @@ export function AppLayout() {
           <nav aria-label="Main" className="flex flex-1 gap-4 text-sm">
             {/* 按角色显示不同的导航：学生看到 Jobs，雇主看到 Postings */}
             {role === 'STUDENT' && (
-              <NavLink to="/jobs" className={navLinkClass}>
-                Jobs
-              </NavLink>
+              <>
+                <NavLink to="/jobs" className={navLinkClass}>
+                  Jobs
+                </NavLink>
+                <NavLink to="/profile" className={navLinkClass}>
+                  Profile
+                </NavLink>
+              </>
             )}
             {role === 'EMPLOYER' && (
-              <NavLink to="/postings" className={navLinkClass}>
-                Postings
-              </NavLink>
+              <>
+                <NavLink to="/postings" className={navLinkClass}>
+                  Postings
+                </NavLink>
+                <NavLink to="/employer/profile" className={navLinkClass}>
+                  Profile
+                </NavLink>
+              </>
             )}
           </nav>
           {/* 退出登录：logout 动作会清掉令牌、用户和所有缓存 */}

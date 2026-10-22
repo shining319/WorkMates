@@ -4,6 +4,8 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { LandingPage } from '../features/auth/pages/LandingPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
+import { EmployerProfilePage } from '../features/profile/pages/EmployerProfilePage'
+import { StudentProfilePage } from '../features/profile/pages/StudentProfilePage'
 import { PlaceholderPage } from './PlaceholderPage'
 import { RequireRole } from './RequireRole'
 
@@ -40,10 +42,7 @@ export const router = createBrowserRouter([
             element: <RequireRole allowed="STUDENT" />,
             children: [
               { path: '/jobs', element: <PlaceholderPage title="Jobs" /> },
-              {
-                path: '/profile',
-                element: <PlaceholderPage title="Profile" />,
-              },
+              { path: '/profile', element: <StudentProfilePage /> },
             ],
           },
           {
@@ -54,10 +53,7 @@ export const router = createBrowserRouter([
                 path: '/postings',
                 element: <PlaceholderPage title="My postings" />,
               },
-              {
-                path: '/employer/profile',
-                element: <PlaceholderPage title="Employer profile" />,
-              },
+              { path: '/employer/profile', element: <EmployerProfilePage /> },
             ],
           },
         ],
