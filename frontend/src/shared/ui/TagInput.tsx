@@ -11,8 +11,8 @@ interface TagInputProps {
   /** 已选的标签（都是小写） */
   value: string[]
   onChange: (tags: string[]) => void
-  /** 最多几个标签。学生是 20 */
-  max: number
+  /** 最多几个标签。学生是 20；不传表示不限（职位的技能标签） */
+  max?: number
   /** 候选词。由外面按输入内容去请求，这里只负责显示 */
   suggestions: string[]
   /** 输入内容变了就通知外面（清空时传空字符串） */
@@ -42,7 +42,7 @@ export function TagInput({
   const [open, setOpen] = useState(false)
 
   const typed = text.trim().toLowerCase()
-  const atLimit = value.length >= max
+  const atLimit = max !== undefined && value.length >= max
 
   // 候选词里去掉已选的；如果输入的内容不在候选词里，最后加一项"新建这个标签"。
   const options = suggestions.filter((name) => !value.includes(name))

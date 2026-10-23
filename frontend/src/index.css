@@ -48,6 +48,17 @@
   --color-danger-bg: #fdecec;
   --color-danger-text: #a61b1b;
   --color-info-bg: #e6f1fc;
+  --color-success-bg: #e8f6eb;
+  --color-success-text: #0f7a27;
+  --color-neutral-bg: #efeeec;
+
+  /* 工作类型徽标的颜色 */
+  --color-jobtype-part-time: #1d6f6c;
+  --color-jobtype-part-time-bg: #e2f3f2;
+  --color-jobtype-full-time: #793400;
+  --color-jobtype-full-time-bg: #fcefe5;
+  --color-jobtype-internship: #391c57;
+  --color-jobtype-internship-bg: #f1e7fc;
 
   --font-sans:
     'Inter', -apple-system, system-ui, 'Segoe UI', Helvetica, Arial, sans-serif;

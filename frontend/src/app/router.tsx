@@ -6,6 +6,9 @@ import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
 import { EmployerProfilePage } from '../features/profile/pages/EmployerProfilePage'
 import { StudentProfilePage } from '../features/profile/pages/StudentProfilePage'
+import { MyPostingsPage } from '../features/postings/pages/MyPostingsPage'
+import { PostingDetailPage } from '../features/postings/pages/PostingDetailPage'
+import { PostingFormPage } from '../features/postings/pages/PostingFormPage'
 import { PlaceholderPage } from './PlaceholderPage'
 import { RequireRole } from './RequireRole'
 
@@ -49,9 +52,14 @@ export const router = createBrowserRouter([
             // 第二层守卫：只有雇主能进
             element: <RequireRole allowed="EMPLOYER" />,
             children: [
+              { path: '/postings', element: <MyPostingsPage /> },
+              { path: '/postings/new', element: <PostingFormPage /> },
+              { path: '/postings/:id', element: <PostingDetailPage /> },
+              { path: '/postings/:id/edit', element: <PostingFormPage /> },
               {
-                path: '/postings',
-                element: <PlaceholderPage title="My postings" />,
+                // 申请人列表是 US 4.2，先占位，让列表和详情里的 Applicants 链接有地方去
+                path: '/postings/:id/applicants',
+                element: <PlaceholderPage title="Applicants" />,
               },
               { path: '/employer/profile', element: <EmployerProfilePage /> },
             ],
