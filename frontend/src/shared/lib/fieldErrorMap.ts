@@ -4,7 +4,6 @@ import { isApiError, type ErrorCode } from '../../api/types'
 
 // 哪些后端错误码属于某个表单字段（架构文档 §9.4）：错误码 -> 字段名。
 // 这样 EMAIL_TAKEN 之类的错误会直接显示在邮箱输入框下面。
-// 做岗位功能时，再把 WEEKLY_HOURS_EXCEED_SLOTS、HEADCOUNT_BELOW_FILLED 加进来。
 //
 // Partial<Record<ErrorCode, string>> 的意思：键只能是 ErrorCode 里的值，值是字符串，
 // 并且不用把所有错误码都列出来（Partial 表示"可以缺项"）。
@@ -15,6 +14,9 @@ const fieldByErrorCode: Partial<Record<ErrorCode, string>> = {
   BAD_CREDENTIALS: 'root.server', // 不属于某个字段，是整个表单的错误
   // 时间段列表整体的错误（RHF 的字段数组用 .root 存放整组的错误）
   TIME_SLOT_INVALID: 'timeSlots.root',
+  // 职位表单
+  WEEKLY_HOURS_EXCEED_SLOTS: 'weeklyHours',
+  HEADCOUNT_BELOW_FILLED: 'headcount',
 }
 
 /**

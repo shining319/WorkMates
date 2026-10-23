@@ -1,14 +1,15 @@
 import type { ButtonHTMLAttributes, ComponentProps } from 'react'
 import { Link } from 'react-router'
 
-type Variant = 'primary' | 'secondary' | 'utility' | 'ghost'
-type Size = 'md' | 'lg'
+type Variant = 'primary' | 'secondary' | 'utility' | 'ghost' | 'danger'
+type Size = 'sm' | 'md' | 'lg'
 
 // 四种按钮样式：
 //   primary    蓝色实心药丸，页面上最重要的操作
 //   secondary  白色药丸带轻阴影，和 primary 并排的次要操作
 //   utility    8px 圆角加描边，页头、工具栏里的小按钮
 //   ghost      没有底色，鼠标移上去才有浅灰底
+//   danger     红色实心药丸，破坏性操作（关闭职位）的确认按钮
 // Record<Variant, string> 表示：每个 Variant 都要有一个对应的样式字符串，少写一个会报错。
 const variantClass: Record<Variant, string> = {
   primary:
@@ -18,9 +19,12 @@ const variantClass: Record<Variant, string> = {
   utility:
     'rounded-md border border-border bg-surface text-text-strong hover:bg-black/4 active:bg-black/8',
   ghost: 'rounded-md text-text hover:bg-black/4 active:bg-black/8',
+  danger:
+    'rounded-full bg-danger text-on-primary hover:bg-danger-text active:bg-danger-text',
 }
 
 const sizeClass: Record<Size, string> = {
+  sm: 'px-3 py-1 text-caption',
   md: 'px-4.5 py-2 text-body-sm',
   lg: 'px-6 py-3 text-base',
 }
