@@ -37,7 +37,14 @@ function ErrorLine({ message }: { message: string }) {
  * 重叠、结束早于开始这些错误由 schemas.ts 的 Zod 规则产生，这里只负责显示在对应的行下面。
  * 服务端返回的 TIME_SLOT_INVALID 放在 `timeSlots.root`，显示在整个列表的底部。
  */
-export function TimeSlotEditor() {
+export function TimeSlotEditor({
+  title = 'Free time slots',
+  emptyText = 'No free time slots yet. Add the times you can work each week.',
+}: {
+  /** 卡片标题。学生档案用默认值，职位表单传 "Weekly time slots" */
+  title?: string
+  emptyText?: string
+}) {
   const {
     control,
     register,
@@ -63,16 +70,14 @@ export function TimeSlotEditor() {
   return (
     <div className="flex flex-col gap-3.5">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-title">Free time slots</h2>
+        <h2 className="text-title">{title}</h2>
         <span className="text-caption text-text-muted tabular-nums">
           {fields.length} of {MAX_TIME_SLOTS} · {totalHours(slots)} h per week
         </span>
       </div>
 
       {fields.length === 0 && (
-        <p className="text-body-sm text-text-muted">
-          No free time slots yet. Add the times you can work each week.
-        </p>
+        <p className="text-body-sm text-text-muted">{emptyText}</p>
       )}
 
       <ul className="flex flex-col gap-3">

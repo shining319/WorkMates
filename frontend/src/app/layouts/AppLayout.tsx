@@ -38,7 +38,7 @@ export function AppLayout() {
             {role === 'EMPLOYER' && (
               <>
                 <NavLink to="/postings" className={navLinkClass}>
-                  Postings
+                  My postings
                 </NavLink>
                 <NavLink to="/employer/profile" className={navLinkClass}>
                   Profile
