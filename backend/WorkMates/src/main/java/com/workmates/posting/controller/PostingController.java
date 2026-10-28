@@ -1,19 +1,25 @@
 package com.workmates.posting.controller;
 
+import com.workmates.common.PageInfo;
 import com.workmates.common.Result;
 import com.workmates.common.security.CurrentUser;
 import com.workmates.common.security.RequireRole;
 import com.workmates.common.security.Role;
 import com.workmates.posting.dto.PostingDetailResponse;
+import com.workmates.posting.dto.PostingListItemResponse;
 import com.workmates.posting.dto.PostingRequest;
 import com.workmates.posting.dto.PostingResponse;
+import com.workmates.posting.entity.PostingStatus;
 import com.workmates.posting.service.PostingService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +28,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -49,9 +56,38 @@ public class PostingController {
         }
     }
 
+    /** Schema-only class for Swagger, like {@link PostingResult}. */
+    @Schema(description = "One page of my postings")
+    private static class MyPostingsResult extends Result<List<PostingListItemResponse>> {
+        @Schema(description = "The postings on this page, newest first")
+        @Override
+        public List<PostingListItemResponse> getData() {
+            return super.getData();
+        }
+    }
+
     private final PostingService service;
 
     public PostingController(PostingService service) { this.service = service; }
+
+    @GetMapping("/mine")
+    @RequireRole(Role.EMPLOYER)
+    @Operation(summary = "My postings in one status, newest first, 20 per page, with application counts")
+    @ApiResponse(responseCode = "200", description = "One page of my postings",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = MyPostingsResult.class)))
+    @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED (status missing or invalid, page below 0)",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHORIZED",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    @ApiResponse(responseCode = "403", description = "ACCESS_DENIED (not an employer)",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    public Result<List<PostingListItemResponse>> mine(
+            CurrentUser user,
+            @Parameter(description = "OPEN or CLOSED") @RequestParam PostingStatus status,
+            @Parameter(description = "Page number, starting at 0") @RequestParam(defaultValue = "0") int page) {
+        Page<PostingListItemResponse> found = service.mine(user.getId(), status, page);
+        return Result.ok(found.getContent(), pageInfo(found));
+    }
 
     @PostMapping
     @RequireRole(Role.EMPLOYER)
@@ -118,5 +154,9 @@ public class PostingController {
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
     public Result<PostingResponse> close(CurrentUser user, @PathVariable Long id) {
         return Result.ok(service.close(user.getId(), id));
+    }
+
+    private static PageInfo pageInfo(Page<?> page) {
+        return new PageInfo(page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages());
     }
 }

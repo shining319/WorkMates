@@ -7,6 +7,7 @@ import com.workmates.common.ErrorCode;
 import com.workmates.common.timeslot.TimeSlot;
 import com.workmates.common.timeslot.TimeSlotDto;
 import com.workmates.posting.dto.PostingDetailResponse;
+import com.workmates.posting.dto.PostingListItemResponse;
 import com.workmates.posting.dto.PostingRequest;
 import com.workmates.posting.dto.PostingResponse;
 import com.workmates.posting.entity.CloseReason;
@@ -18,6 +19,10 @@ import com.workmates.profile.repository.EmployerProfileRepository;
 import com.workmates.profile.service.TagService;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 /** Creates, reads, edits and closes job postings. */
 @Service
 public class PostingService {
+    static final int PAGE_SIZE = 20;
+    /** Newest first; the ID breaks ties so that pages never overlap. */
+    static final Sort NEWEST_FIRST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+
     private final PostingRepository postings;
     private final TagService tags;
     private final ApplicationQueryService applications;
@@ -55,6 +64,19 @@ public class PostingService {
         EmployerProfile employer = employers.findById(posting.getEmployerId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
         return PostingDetailResponse.from(posting, employer, applications.countsOf(postingId));
+    }
+
+    /** One page of the employer's postings in one status, newest first, with application counts. */
+    @Transactional(readOnly = true)
+    public Page<PostingListItemResponse> mine(Long employerId, PostingStatus status, int page) {
+        if (page < 0) {
+            throw new BusinessException(ErrorCode.VALIDATION_FAILED, "page must be 0 or more");
+        }
+        Page<Posting> found = postings.findByEmployerIdAndStatus(employerId, status,
+                PageRequest.of(page, PAGE_SIZE, NEWEST_FIRST));
+        Map<Long, PostingCounts> counts = applications.countsByPostings(
+                found.getContent().stream().map(Posting::getId).toList());
+        return found.map(posting -> PostingListItemResponse.from(posting, counts.get(posting.getId())));
     }
 
     /** Edits an open posting of the employer. Tags and time slots are replaced as a whole. */
