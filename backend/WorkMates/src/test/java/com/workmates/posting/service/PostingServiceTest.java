@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -17,6 +19,7 @@ import com.workmates.common.BusinessException;
 import com.workmates.common.ErrorCode;
 import com.workmates.common.timeslot.TimeSlotDto;
 import com.workmates.posting.dto.PostingDetailResponse;
+import com.workmates.posting.dto.PostingListItemResponse;
 import com.workmates.posting.dto.PostingRequest;
 import com.workmates.posting.dto.PostingResponse;
 import com.workmates.posting.entity.Area;
@@ -37,12 +40,18 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 class PostingServiceTest {
     private static final Long EMPLOYER_ID = 5L;
@@ -437,6 +446,95 @@ class PostingServiceTest {
         BusinessException e = assertThrows(BusinessException.class, () -> service.close(EMPLOYER_ID, POSTING_ID));
 
         assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+    }
+
+    // ---------- my postings ----------
+
+    private static Posting listed(long id, PostingStatus status) {
+        Posting posting = new Posting();
+        posting.setId(id);
+        posting.setEmployerId(EMPLOYER_ID);
+        posting.setTitle("Posting " + id);
+        posting.setJobType(JobType.PART_TIME);
+        posting.setHeadcount(3);
+        posting.setStatus(status);
+        posting.setCreatedAt(Instant.parse("2026-10-01T10:00:00Z"));
+        return posting;
+    }
+
+    @Test
+    void mineAsksForTheEmployersPostingsInTheStatusNewestFirst20PerPage() {
+        when(postings.findByEmployerIdAndStatus(any(), any(), any())).thenReturn(Page.empty());
+
+        service.mine(EMPLOYER_ID, PostingStatus.CLOSED, 2);
+
+        ArgumentCaptor<Pageable> pageable = ArgumentCaptor.forClass(Pageable.class);
+        verify(postings).findByEmployerIdAndStatus(eq(EMPLOYER_ID), eq(PostingStatus.CLOSED), pageable.capture());
+        assertEquals(2, pageable.getValue().getPageNumber());
+        assertEquals(20, pageable.getValue().getPageSize());
+        assertEquals(Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id")), pageable.getValue().getSort());
+    }
+
+    @Test
+    void mineMergesTheCountsIntoEachRow() {
+        Posting first = listed(1L, PostingStatus.OPEN);
+        Posting second = listed(2L, PostingStatus.OPEN);
+        when(postings.findByEmployerIdAndStatus(any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(first, second), PageRequest.of(0, 20), 2));
+        when(applications.countsByPostings(List.of(1L, 2L))).thenReturn(Map.of(
+                1L, new PostingCounts(1L, 2L, 4L, 1L),
+                2L, PostingCounts.empty(2L)));
+
+        Page<PostingListItemResponse> page = service.mine(EMPLOYER_ID, PostingStatus.OPEN, 0);
+
+        assertEquals(2, page.getTotalElements());
+        PostingListItemResponse row = page.getContent().get(0);
+        assertEquals(1L, row.getId());
+        assertEquals("Posting 1", row.getTitle());
+        assertEquals(JobType.PART_TIME, row.getJobType());
+        assertEquals(PostingStatus.OPEN, row.getStatus());
+        assertNull(row.getCloseReason());
+        assertEquals(3, row.getHeadcount());
+        assertEquals(2L, row.getHiredCount());
+        assertEquals(4L, row.getInProgressCount());
+        assertEquals(first.getCreatedAt(), row.getCreatedAt());
+        assertEquals(0L, page.getContent().get(1).getHiredCount());
+        assertEquals(0L, page.getContent().get(1).getInProgressCount());
+    }
+
+    @Test
+    void mineShowsTheCloseReasonOfClosedPostings() {
+        Posting closed = listed(1L, PostingStatus.CLOSED);
+        closed.setCloseReason(CloseReason.FILLED);
+        when(postings.findByEmployerIdAndStatus(any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(closed), PageRequest.of(0, 20), 1));
+        when(applications.countsByPostings(List.of(1L))).thenReturn(Map.of(1L, PostingCounts.empty(1L)));
+
+        Page<PostingListItemResponse> page = service.mine(EMPLOYER_ID, PostingStatus.CLOSED, 0);
+
+        assertEquals(PostingStatus.CLOSED, page.getContent().get(0).getStatus());
+        assertEquals(CloseReason.FILLED, page.getContent().get(0).getCloseReason());
+    }
+
+    @Test
+    void mineWithNoPostingsIsAnEmptyPage() {
+        when(postings.findByEmployerIdAndStatus(any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 20), 0));
+        when(applications.countsByPostings(List.of())).thenReturn(Map.of());
+
+        Page<PostingListItemResponse> page = service.mine(EMPLOYER_ID, PostingStatus.OPEN, 0);
+
+        assertTrue(page.getContent().isEmpty());
+        assertEquals(0, page.getTotalElements());
+    }
+
+    @Test
+    void mineWithANegativePageIsRejected() {
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> service.mine(EMPLOYER_ID, PostingStatus.OPEN, -1));
+
+        assertEquals(ErrorCode.VALIDATION_FAILED, e.getCode());
+        verify(postings, never()).findByEmployerIdAndStatus(any(), any(), any());
     }
 
     // ---------- request field rules ----------
