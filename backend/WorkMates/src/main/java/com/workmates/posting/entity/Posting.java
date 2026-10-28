@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -90,6 +91,7 @@ public class Posting {
     private Set<Tag> tags = new HashSet<>();
 
     @ElementCollection
+    @BatchSize(size = 100) // search reads the slots of many postings: load them with IN (...) instead of one query each
     @CollectionTable(name = "posting_time_slots", joinColumns = @JoinColumn(name = "posting_id"))
     private List<TimeSlot> timeSlots = new ArrayList<>();
 }

@@ -5,11 +5,15 @@ import com.workmates.common.Result;
 import com.workmates.common.security.CurrentUser;
 import com.workmates.common.security.RequireRole;
 import com.workmates.common.security.Role;
+import com.workmates.posting.dto.JobCardResponse;
 import com.workmates.posting.dto.PostingDetailResponse;
 import com.workmates.posting.dto.PostingListItemResponse;
 import com.workmates.posting.dto.PostingRequest;
 import com.workmates.posting.dto.PostingResponse;
+import com.workmates.posting.entity.Area;
+import com.workmates.posting.entity.JobType;
 import com.workmates.posting.entity.PostingStatus;
+import com.workmates.posting.service.PostingSearchService;
 import com.workmates.posting.service.PostingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,6 +22,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -66,9 +71,52 @@ public class PostingController {
         }
     }
 
-    private final PostingService service;
+    /** Schema-only class for Swagger, like {@link PostingResult}. */
+    @Schema(description = "One page of job cards")
+    private static class JobSearchResult extends Result<List<JobCardResponse>> {
+        @Schema(description = "The job cards on this page, newest first")
+        @Override
+        public List<JobCardResponse> getData() {
+            return super.getData();
+        }
+    }
 
-    public PostingController(PostingService service) { this.service = service; }
+    private final PostingService service;
+    private final PostingSearchService searchService;
+
+    public PostingController(PostingService service, PostingSearchService searchService) {
+        this.service = service;
+        this.searchService = searchService;
+    }
+
+    @GetMapping
+    @RequireRole(Role.STUDENT)
+    @Operation(summary = "Search open postings, newest first, 20 per page. All filters are optional and combine with AND.")
+    @ApiResponse(responseCode = "200", description = "One page of job cards",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = JobSearchResult.class)))
+    @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED (invalid area, type, minRate or page)",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    @ApiResponse(responseCode = "401", description = "UNAUTHORIZED",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    @ApiResponse(responseCode = "403", description = "ACCESS_DENIED (not a student)",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
+    public Result<List<JobCardResponse>> search(
+            CurrentUser user,
+            @Parameter(description = "Matches the title, the description or a tag, ignoring case")
+            @RequestParam(required = false) String keyword,
+            @Parameter(description = "Location areas. Repeat the parameter to choose several")
+            @RequestParam(required = false) List<Area> areas,
+            @Parameter(description = "Job types. Repeat the parameter to choose several")
+            @RequestParam(required = false) List<JobType> types,
+            @Parameter(description = "Lowest hourly rate in EUR")
+            @RequestParam(required = false) BigDecimal minRate,
+            @Parameter(description = "Only postings whose time slots are at least half covered by my free slots")
+            @RequestParam(defaultValue = "false") boolean fitsMyTime,
+            @Parameter(description = "Page number, starting at 0") @RequestParam(defaultValue = "0") int page) {
+        Page<JobCardResponse> found = searchService.search(user.getId(),
+                new PostingSearchService.Filters(keyword, areas, types, minRate, fitsMyTime), page);
+        return Result.ok(found.getContent(), pageInfo(found));
+    }
 
     @GetMapping("/mine")
     @RequireRole(Role.EMPLOYER)
