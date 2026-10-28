@@ -1,4 +1,5 @@
 import { Clock, Euro, MapPin } from 'lucide-react'
+import { Link } from 'react-router'
 import {
   AREA_LABEL,
   type Area,
@@ -18,15 +19,15 @@ interface JobCardProps {
   area: Area
   /** 已经格式化好的文字，例如 "22 Sep"、"just now" */
   postedAt: string
+  /** 有它时整张卡片是链接（职位列表跳到职位详情）；职位表单的预览不传 */
+  to?: string
 }
 
 /**
  * 职位卡片（设计稿的 JobCard）。
  *
- * 【目前只是"显示版"】US 2.1 的职位表单为了做 "How students see it" 预览先建了它，
- * 所以现在它只负责显示，没有点击跳转，也没有匹配度。
- * 做 US 3.1（F3.1.1 职位列表）时：加上点击跳转到 /jobs/:id（可以包一层 <Link>，或加 `to` 属性）。
- * 做 US 3.3（F3.3.1）时：加 `matchScore` 属性，卡片底部左边显示匹配度（现在底部左边是空的）。
+ * 传 `to` 时整张卡片是链接（US 3.1 的职位列表用）；不传时只是显示（职位表单的预览用）。
+ * 【还没有匹配度】做 US 3.3（F3.3.1）时：加 `matchScore` 属性，卡片底部左边显示匹配度（现在底部左边是空的）。
  */
 export function JobCard({
   title,
@@ -36,9 +37,12 @@ export function JobCard({
   weeklyHours,
   area,
   postedAt,
+  to,
 }: JobCardProps) {
-  return (
-    <Card className="flex flex-col gap-3 p-5">
+  const card = (
+    <Card
+      className={`flex h-full flex-col gap-3 p-5 ${to ? 'transition-shadow group-hover:shadow-card' : ''}`}
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="text-[17px] leading-6 font-semibold tracking-[-0.2px] wrap-break-word text-text-strong">
@@ -79,5 +83,12 @@ export function JobCard({
         {postedAt}
       </div>
     </Card>
+  )
+  if (!to) return card
+  // group：鼠标移到链接上时，里面的卡片加阴影
+  return (
+    <Link to={to} className="group block h-full rounded-lg">
+      {card}
+    </Link>
   )
 }
