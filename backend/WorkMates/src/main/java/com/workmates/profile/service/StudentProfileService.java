@@ -76,7 +76,8 @@ public class StudentProfileService {
     public StudentMatchInput matchInput(Long studentId) {
         StudentProfile profile = load(studentId);
         Set<Long> tagIds = profile.getTags().stream().map(Tag::getId).collect(Collectors.toSet());
-        return new StudentMatchInput(List.copyOf(profile.getTimeSlots()), tagIds, profile.getExpectedHourlyRate());
+        return new StudentMatchInput(List.copyOf(profile.getTimeSlots()), tagIds, profile.getExpectedHourlyRate(),
+                profile.getTags().stream().map(Tag::getName).toList());
     }
 
     private StudentProfile load(Long studentId) {
