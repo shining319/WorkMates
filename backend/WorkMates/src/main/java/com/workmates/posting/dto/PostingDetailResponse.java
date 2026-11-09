@@ -1,6 +1,10 @@
 package com.workmates.posting.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.workmates.application.dto.PostingCounts;
+import com.workmates.application.entity.ApplicationStatus;
+import com.workmates.common.timeslot.TimeSlotDto;
+import java.util.List;
 import com.workmates.posting.entity.Posting;
 import com.workmates.profile.entity.EmployerProfile;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,6 +21,14 @@ public class PostingDetailResponse extends PostingResponse {
     private long inProgressCount;
     @Schema(description = "Applications the system rejected because the posting filled", example = "0")
     private long autoRejectedCount;
+    /** These US 3.4 fields are populated for student requests only. */
+    @Schema(description = "Student match explanation; null for employer views")
+    private MatchBreakdownResponse matchBreakdown;
+    private List<TimeSlotDto> studentFreeSlots;
+    private Boolean alreadyApplied;
+    private ApplicationStatus applicationStatus;
+    private Boolean canApply;
+    private String closedNotice;
 
     public static PostingDetailResponse from(Posting posting, EmployerProfile employer, PostingCounts counts) {
         PostingDetailResponse response = new PostingDetailResponse();
@@ -29,6 +41,28 @@ public class PostingDetailResponse extends PostingResponse {
         return response;
     }
 
+    public void addStudentMatch(MatchBreakdownResponse match, List<TimeSlotDto> freeSlots,
+                                ApplicationStatus currentStatus, boolean applied, boolean open) {
+        this.matchBreakdown = match;
+        this.studentFreeSlots = freeSlots;
+        this.applicationStatus = currentStatus;
+        this.alreadyApplied = applied;
+        this.canApply = open && !applied;
+        this.closedNotice = open ? null : "This posting is closed";
+    }
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public MatchBreakdownResponse getMatchBreakdown() { return matchBreakdown; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public List<TimeSlotDto> getStudentFreeSlots() { return studentFreeSlots; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Boolean getAlreadyApplied() { return alreadyApplied; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public ApplicationStatus getApplicationStatus() { return applicationStatus; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Boolean getCanApply() { return canApply; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public String getClosedNotice() { return closedNotice; }
     public String getEmployerName() { return employerName; }
     public String getEmployerBio() { return employerBio; }
     public long getHiredCount() { return hiredCount; }
