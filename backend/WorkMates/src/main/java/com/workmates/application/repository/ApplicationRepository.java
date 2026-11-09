@@ -4,11 +4,16 @@ import com.workmates.application.dto.PostingCounts;
 import com.workmates.application.entity.Application;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
+
+    /** Current application if a student has applied to this posting (US 3.4). */
+    Optional<Application> findFirstByPostingIdAndStudentIdOrderByCreatedAtDescIdDesc(
+            Long postingId, Long studentId);
 
     /** One row per posting that has applications. Postings without any are not returned. */
     @Query("""
