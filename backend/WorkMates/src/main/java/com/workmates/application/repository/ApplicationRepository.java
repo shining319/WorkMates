@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
+    boolean existsByPostingIdAndStudentId(Long postingId, Long studentId);
+
     /** One row per posting that has applications. Postings without any are not returned. */
     @Query("""
             select new com.workmates.application.dto.PostingCounts(a.postingId,
