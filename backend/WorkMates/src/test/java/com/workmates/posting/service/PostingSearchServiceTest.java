@@ -143,12 +143,12 @@ class PostingSearchServiceTest {
     }
 
     @Test
-    void doesNotReadTheStudentProfileUnlessFitsMyTimeIsOn() {
+    void readsTheStudentProfileForRankingEvenWithoutFilters() {
         repositoryReturns(List.of(posting(1)));
 
         service.search(STUDENT_ID, NO_FILTERS, 0);
 
-        verify(students, never()).matchInput(any());
+        verify(students).matchInput(STUDENT_ID);
     }
 
     @Test
