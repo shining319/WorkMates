@@ -1,13 +1,21 @@
 package com.workmates.matching;
 
 import com.workmates.common.timeslot.TimeSlot;
+import com.workmates.posting.entity.Posting;
+import com.workmates.profile.dto.StudentMatchInput;
+import com.workmates.profile.entity.Tag;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
 /**
  * Pure functions that compare a student with a posting. No database access.
- * For now it holds the time score only; the skill and pay scores come with US 3.3.
+ * US 3.2 time coverage is retained and shared with US 3.3 ranking and US 3.4 details.
  */
 public final class MatchScoreCalculator {
 
@@ -73,4 +81,59 @@ public final class MatchScoreCalculator {
         }
         return new SlotCoverage(job, covered, uncovered);
     }
+    /** Scores in the inclusive range 0..1. The exact overall value is used for sorting. */
+    public record MatchScore(TimeMatch time, double timeScore, double skillScore, double payScore,
+                             double overallScore, int matchPercent,
+                             int matchedSkills, int requiredSkills,
+                             List<String> matchedTags, List<String> missingTags,
+                             BigDecimal jobHourlyRate, BigDecimal expectedHourlyRate) {
+    }
+
+    /** Calculates time, case-insensitive skills and pay, giving zero to any missing profile part. */
+    public static MatchScore calculate(StudentMatchInput student, Posting job) {
+        List<TimeSlot> free = student == null || student.getTimeSlots() == null
+                ? List.of() : student.getTimeSlots();
+        List<TimeSlot> required = job.getTimeSlots() == null ? List.of() : job.getTimeSlots();
+        TimeMatch time = timeMatch(free, required);
+
+        Set<String> studentTags = new HashSet<>();
+        if (student != null && student.getTagNames() != null) {
+            for (String tag : student.getTagNames()) {
+                if (tag != null && !tag.isBlank()) {
+                    studentTags.add(tag.trim().toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+
+        Set<String> seen = new HashSet<>();
+        List<String> matched = new ArrayList<>();
+        List<String> missing = new ArrayList<>();
+        if (job.getTags() != null) {
+            for (Tag tag : job.getTags()) {
+                if (tag == null || tag.getName() == null || tag.getName().isBlank()) continue;
+                String normalized = tag.getName().trim().toLowerCase(Locale.ROOT);
+                if (!seen.add(normalized)) continue;
+                if (studentTags.contains(normalized)) matched.add(tag.getName());
+                else missing.add(tag.getName());
+            }
+        }
+        matched.sort(String.CASE_INSENSITIVE_ORDER);
+        missing.sort(String.CASE_INSENSITIVE_ORDER);
+        int requiredCount = matched.size() + missing.size();
+        double skillScore = requiredCount == 0 || studentTags.isEmpty()
+                ? 0.0 : (double) matched.size() / requiredCount;
+
+        BigDecimal rate = job.getHourlyRate();
+        BigDecimal expected = student == null ? null : student.getExpectedHourlyRate();
+        double payScore = 0.0;
+        if (expected != null && expected.signum() > 0 && rate != null && rate.signum() >= 0) {
+            payScore = rate.compareTo(expected) >= 0 ? 1.0
+                    : rate.divide(expected, MathContext.DECIMAL128).doubleValue();
+        }
+        double overall = (time.score() + skillScore + payScore) / 3.0;
+        return new MatchScore(time, time.score(), skillScore, payScore, overall,
+                (int) Math.round(overall * 100.0), matched.size(), requiredCount,
+                List.copyOf(matched), List.copyOf(missing), rate, expected);
+    }
+
 }

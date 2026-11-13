@@ -143,12 +143,12 @@ class PostingSearchServiceTest {
     }
 
     @Test
-    void doesNotReadTheStudentProfileUnlessFitsMyTimeIsOn() {
+    void readsTheStudentProfileForRankingEvenWithoutFilters() {
         repositoryReturns(List.of(posting(1)));
 
         service.search(STUDENT_ID, NO_FILTERS, 0);
 
-        verify(students, never()).matchInput(any());
+        verify(students).matchInput(STUDENT_ID);
     }
 
     @Test
@@ -156,7 +156,7 @@ class PostingSearchServiceTest {
         List<Posting> found = new ArrayList<>();
         for (long id = 1; id <= 25; id++) {
             Posting posting = posting(id);
-            posting.setEmployerId(id <= 20 ? 5L : 6L); // employer 6 owns postings that are only on page 1
+            posting.setEmployerId(id <= 5 ? 6L : 5L); // ranking ties break by newest id, so employer 6's postings land on page 1
             found.add(posting);
         }
         repositoryReturns(found);
