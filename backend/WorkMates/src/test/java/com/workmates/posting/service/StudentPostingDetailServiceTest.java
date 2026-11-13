@@ -58,6 +58,7 @@ class StudentPostingDetailServiceTest {
         assertEquals("15:00", result.getStudentFreeSlots().get(0).getStart());
         assertTrue(result.getCanApply());
         assertFalse(result.getAlreadyApplied());
+        assertNull(result.getApplicationId());
     }
 
     @Test void closedPostingIsClearlyMarkedAndCannotApply() {
@@ -70,10 +71,12 @@ class StudentPostingDetailServiceTest {
     @Test void existingApplicationDisplaysStatusAndHidesApply() {
         prepare(PostingStatus.OPEN);
         Application application = new Application();
+        application.setId(9L);
         application.setStatus(ApplicationStatus.REVIEWED);
         when(applications.findFirstByPostingIdAndStudentIdOrderByCreatedAtDescIdDesc(42L,7L))
                 .thenReturn(Optional.of(application));
         var result = detail.get(7L, 42L);
+        assertEquals(9L, result.getApplicationId());
         assertEquals(ApplicationStatus.REVIEWED, result.getApplicationStatus());
         assertTrue(result.getAlreadyApplied());
         assertFalse(result.getCanApply());

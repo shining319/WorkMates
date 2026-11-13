@@ -25,6 +25,8 @@ public class PostingDetailResponse extends PostingResponse {
     @Schema(description = "Student match explanation; null for employer views")
     private MatchBreakdownResponse matchBreakdown;
     private List<TimeSlotDto> studentFreeSlots;
+    @Schema(description = "The student's own application ID; null when they have not applied")
+    private Long applicationId;
     private Boolean alreadyApplied;
     private ApplicationStatus applicationStatus;
     private Boolean canApply;
@@ -42,9 +44,11 @@ public class PostingDetailResponse extends PostingResponse {
     }
 
     public void addStudentMatch(MatchBreakdownResponse match, List<TimeSlotDto> freeSlots,
-                                ApplicationStatus currentStatus, boolean applied, boolean open) {
+                                Long currentApplicationId, ApplicationStatus currentStatus, boolean applied,
+                                boolean open) {
         this.matchBreakdown = match;
         this.studentFreeSlots = freeSlots;
+        this.applicationId = currentApplicationId;
         this.applicationStatus = currentStatus;
         this.alreadyApplied = applied;
         this.canApply = open && !applied;
@@ -55,6 +59,8 @@ public class PostingDetailResponse extends PostingResponse {
     public MatchBreakdownResponse getMatchBreakdown() { return matchBreakdown; }
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public List<TimeSlotDto> getStudentFreeSlots() { return studentFreeSlots; }
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Long getApplicationId() { return applicationId; }
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public Boolean getAlreadyApplied() { return alreadyApplied; }
     @JsonInclude(JsonInclude.Include.NON_NULL)

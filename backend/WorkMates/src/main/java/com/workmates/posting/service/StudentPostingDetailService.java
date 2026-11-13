@@ -50,6 +50,7 @@ public class StudentPostingDetailService {
                             .thenComparingInt(com.workmates.common.timeslot.TimeSlot::getStartMinute))
                     .map(TimeSlotDto::from).toList();
         response.addStudentMatch(MatchBreakdownResponse.from(match), freeSlots,
+                application.map(Application::getId).orElse(null),
                 application.map(Application::getStatus).orElse(null), application.isPresent(),
                 job.getStatus() == PostingStatus.OPEN);
         return response;
