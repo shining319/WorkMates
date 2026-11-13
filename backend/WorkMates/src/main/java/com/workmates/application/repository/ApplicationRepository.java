@@ -14,6 +14,8 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     /** Current application if a student has applied to this posting (US 3.4). */
     Optional<Application> findFirstByPostingIdAndStudentIdOrderByCreatedAtDescIdDesc(
             Long postingId, Long studentId);
+  
+    boolean existsByPostingIdAndStudentId(Long postingId, Long studentId);
 
     /** One row per posting that has applications. Postings without any are not returned. */
     @Query("""
