@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { Button } from './Button'
 
 interface ConfirmDialogProps {
@@ -6,6 +6,10 @@ interface ConfirmDialogProps {
   title: string
   description: string
   confirmLabel: string
+  /** 确认按钮的样式。默认红色（破坏性操作）；普通确认传 'primary' */
+  confirmVariant?: 'danger' | 'primary'
+  /** 描述下面的额外内容（例如申请前的档案摘要） */
+  children?: ReactNode
   /** 请求进行中：确认按钮不可点，避免重复提交 */
   busy?: boolean
   onConfirm: () => void
@@ -22,6 +26,8 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel,
+  confirmVariant = 'danger',
+  children,
   busy,
   onConfirm,
   onCancel,
@@ -53,11 +59,12 @@ export function ConfirmDialog({
         </h2>
         <p className="text-body-sm text-text-muted">{description}</p>
       </div>
+      {children && <div className="px-6 pt-4">{children}</div>}
       <div className="flex justify-end gap-2 px-6 pt-5 pb-5">
         <Button variant="ghost" disabled={busy} onClick={onCancel}>
           Cancel
         </Button>
-        <Button variant="danger" disabled={busy} onClick={onConfirm}>
+        <Button variant={confirmVariant} disabled={busy} onClick={onConfirm}>
           {confirmLabel}
         </Button>
       </div>

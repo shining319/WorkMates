@@ -7,6 +7,7 @@ import {
 } from '../../../shared/lib/constants'
 import { formatHours } from '../../../shared/lib/format'
 import { Card } from '../../../shared/ui/Card'
+import { MatchScore } from '../../../shared/ui/MatchScore'
 import { JobTypeBadge } from './JobTypeBadge'
 
 interface JobCardProps {
@@ -19,6 +20,8 @@ interface JobCardProps {
   area: Area
   /** 已经格式化好的文字，例如 "22 Sep"、"just now" */
   postedAt: string
+  /** 匹配度（0–100 的整数）。职位表单的预览不传，不显示 */
+  matchPercent?: number
   /** 有它时整张卡片是链接（职位列表跳到职位详情）；职位表单的预览不传 */
   to?: string
 }
@@ -27,7 +30,7 @@ interface JobCardProps {
  * 职位卡片（设计稿的 JobCard）。
  *
  * 传 `to` 时整张卡片是链接（US 3.1 的职位列表用）；不传时只是显示（职位表单的预览用）。
- * 【还没有匹配度】做 US 3.3（F3.3.1）时：加 `matchScore` 属性，卡片底部左边显示匹配度（现在底部左边是空的）。
+ * 传 `matchPercent` 时，底部左边显示匹配度（US 3.3）。
  */
 export function JobCard({
   title,
@@ -37,6 +40,7 @@ export function JobCard({
   weeklyHours,
   area,
   postedAt,
+  matchPercent,
   to,
 }: JobCardProps) {
   const card = (
@@ -78,8 +82,12 @@ export function JobCard({
         </span>
       </div>
 
-      {/* 底部左边留给匹配度（US 3.3），现在只有发布时间 */}
-      <div className="flex items-center justify-end gap-3 border-t border-border pt-3 text-caption text-text-faint">
+      <div className="flex items-center justify-between gap-3 border-t border-border pt-3 text-caption text-text-faint">
+        {matchPercent === undefined ? (
+          <span />
+        ) : (
+          <MatchScore percent={matchPercent} />
+        )}
         {postedAt}
       </div>
     </Card>
