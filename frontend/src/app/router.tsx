@@ -4,6 +4,7 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { LandingPage } from '../features/auth/pages/LandingPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
+import { JobDetailPage } from '../features/jobs/pages/JobDetailPage'
 import { JobsPage } from '../features/jobs/pages/JobsPage'
 import { EmployerProfilePage } from '../features/profile/pages/EmployerProfilePage'
 import { StudentProfilePage } from '../features/profile/pages/StudentProfilePage'
@@ -46,10 +47,11 @@ export const router = createBrowserRouter([
             element: <RequireRole allowed="STUDENT" />,
             children: [
               { path: '/jobs', element: <JobsPage /> },
+              { path: '/jobs/:id', element: <JobDetailPage /> },
               {
-                // 职位详情是 US 3.4，先占位，让列表里卡片的链接有地方去
-                path: '/jobs/:id',
-                element: <PlaceholderPage title="Job detail" />,
+                // 申请详情是 US 4.6，先占位，让职位详情里的 View application 链接有地方去
+                path: '/applications/:id',
+                element: <PlaceholderPage title="Application" />,
               },
               { path: '/profile', element: <StudentProfilePage /> },
             ],

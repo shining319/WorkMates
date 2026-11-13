@@ -1,11 +1,25 @@
 // 状态徽标：圆点 + 文字，不只靠颜色区分。
-// 目前只有职位状态（Open / Closed）。做申请状态（F4.6.1）时，在这里加 APPLIED、REVIEWED 等。
+// 职位状态（Open / Closed）和申请状态（Applied ... Completed）共用这一个徽标。
+import type { ApplicationStatus } from '../lib/constants'
 
-type Status = 'OPEN' | 'CLOSED'
+type Status = 'OPEN' | 'CLOSED' | ApplicationStatus
+
+const progress = 'bg-info-bg text-primary-pressed'
+const good = 'bg-success-bg text-success-text'
+const bad = 'bg-danger-bg text-danger-text'
+const neutral = 'bg-neutral-bg text-text-muted'
 
 const style: Record<Status, { label: string; className: string }> = {
-  OPEN: { label: 'Open', className: 'bg-success-bg text-success-text' },
-  CLOSED: { label: 'Closed', className: 'bg-neutral-bg text-text-muted' },
+  OPEN: { label: 'Open', className: good },
+  CLOSED: { label: 'Closed', className: neutral },
+  APPLIED: { label: 'Applied', className: progress },
+  REVIEWED: { label: 'Reviewed', className: progress },
+  INTERVIEW: { label: 'Interview', className: progress },
+  OFFER: { label: 'Offer', className: good },
+  ACCEPTED: { label: 'Accepted', className: good },
+  DECLINED: { label: 'Declined', className: bad },
+  REJECTED: { label: 'Rejected', className: bad },
+  COMPLETED: { label: 'Completed', className: neutral },
 }
 
 const reasonLabel = { MANUAL: 'Manual', FILLED: 'Filled' }

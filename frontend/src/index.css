@@ -51,6 +51,13 @@
   --color-success-bg: #e8f6eb;
   --color-success-text: #0f7a27;
   --color-neutral-bg: #efeeec;
+  --color-warning-bg: #fff3e0;
+  --color-warning-text: #8a4400;
+
+  /* 匹配度三档：>=70 绿、40-69 橙、<40 灰。只用在圆环和圆点上，文字仍用深色，对比度够 */
+  --color-match-high: #1aae39;
+  --color-match-mid: #dd5b00;
+  --color-match-low: #a39e98;
 
   /* 工作类型徽标的颜色 */
   --color-jobtype-part-time: #1d6f6c;
