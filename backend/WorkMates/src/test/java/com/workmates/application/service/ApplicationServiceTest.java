@@ -45,7 +45,8 @@ class ApplicationServiceTest {
     private final StudentProfileService profiles = mock(StudentProfileService.class);
     private final NotificationService notifications = mock(NotificationService.class);
     private final ApplicationService service =
-            new ApplicationService(applications, stateMachine, postings, profiles, notifications);
+            new ApplicationService(applications, stateMachine, postings, profiles, notifications,
+                    mock(HeadcountService.class));
 
     @BeforeEach
     void setUp() {

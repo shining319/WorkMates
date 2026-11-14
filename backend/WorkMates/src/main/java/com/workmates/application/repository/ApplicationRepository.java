@@ -2,6 +2,7 @@ package com.workmates.application.repository;
 
 import com.workmates.application.dto.PostingCounts;
 import com.workmates.application.entity.Application;
+import com.workmates.application.entity.ApplicationStatus;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +17,14 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             Long postingId, Long studentId);
   
     boolean existsByPostingIdAndStudentId(Long postingId, Long studentId);
+
+    /** Only the posting ID, so no application entity is loaded (and cached) before the posting is locked. */
+    @Query("select a.postingId from Application a where a.id = :id")
+    Optional<Long> findPostingIdById(@Param("id") Long id);
+
+    long countByPostingIdAndStatusIn(Long postingId, Collection<ApplicationStatus> statuses);
+
+    List<Application> findByPostingIdAndStatusIn(Long postingId, Collection<ApplicationStatus> statuses);
 
     /** One row per posting that has applications. Postings without any are not returned. */
     @Query("""
