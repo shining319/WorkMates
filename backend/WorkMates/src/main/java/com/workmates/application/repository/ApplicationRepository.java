@@ -6,6 +6,8 @@ import com.workmates.application.entity.ApplicationStatus;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -21,6 +23,11 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     /** Only the posting ID, so no application entity is loaded (and cached) before the posting is locked. */
     @Query("select a.postingId from Application a where a.id = :id")
     Optional<Long> findPostingIdById(@Param("id") Long id);
+
+    Page<Application> findByStudentId(Long studentId, Pageable pageable);
+
+    Page<Application> findByStudentIdAndStatusIn(Long studentId, Collection<ApplicationStatus> statuses,
+                                                 Pageable pageable);
 
     long countByPostingIdAndStatusIn(Long postingId, Collection<ApplicationStatus> statuses);
 
