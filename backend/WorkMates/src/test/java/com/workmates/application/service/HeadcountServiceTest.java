@@ -91,4 +91,35 @@ class HeadcountServiceTest {
         verify(applications, never()).countByPostingIdAndStatusIn(any(), any());
         verifyNoInteractions(stateMachine, notifications);
     }
+
+    @Test
+    void onlyAcceptedAndCompletedCountTowardHeadcount() {
+        service.closeIfFilled(posting);
+
+        verify(applications).countByPostingIdAndStatusIn(42L,
+                List.of(ApplicationStatus.ACCEPTED, ApplicationStatus.COMPLETED));
+    }
+
+    @Test
+    void onlyApplicationsStillInProgressAreRejected() {
+        when(applications.countByPostingIdAndStatusIn(eq(42L), any())).thenReturn(2L);
+
+        service.closeIfFilled(posting);
+
+        verify(applications).findByPostingIdAndStatusIn(42L, List.of(ApplicationStatus.APPLIED,
+                ApplicationStatus.REVIEWED, ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER));
+    }
+
+    @Test
+    void employerGetsOneNotificationEvenWithoutOtherApplications() {
+        when(applications.countByPostingIdAndStatusIn(eq(42L), any())).thenReturn(2L);
+        when(applications.findByPostingIdAndStatusIn(eq(42L), any())).thenReturn(List.of());
+
+        service.closeIfFilled(posting);
+
+        assertEquals(PostingStatus.CLOSED, posting.getStatus());
+        verify(notifications, times(1)).notify(any(), any(), any(), any(), any());
+        verify(notifications).notify(eq(5L), eq(NotificationType.POSTING_FILLED), any(),
+                eq(NotificationTargetType.POSTING), eq(42L));
+    }
 }
