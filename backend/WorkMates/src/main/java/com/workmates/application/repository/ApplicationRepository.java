@@ -14,6 +14,9 @@ import org.springframework.data.repository.query.Param;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
+    /** US 4.2: applicants for a posting, after employer ownership is verified by the service. */
+    List<Application> findByPostingId(Long postingId);
+
     /** Current application if a student has applied to this posting (US 3.4). */
     Optional<Application> findFirstByPostingIdAndStudentIdOrderByCreatedAtDescIdDesc(
             Long postingId, Long studentId);
