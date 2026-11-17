@@ -31,7 +31,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** US 4.3 (employer changes) and US 4.4 (student answers an offer). The state machine is a mock. */
+/** US 4.3 (employer changes), US 4.4 (student answers an offer) and US 4.7 (completed). The state machine is a mock. */
 class ApplicationStatusChangeTest {
     private static final Long STUDENT_ID = 3L;
     private static final Long EMPLOYER_ID = 5L;
@@ -140,15 +140,6 @@ class ApplicationStatusChangeTest {
         assertEquals(ErrorCode.NOT_FOUND, e.getCode());
     }
 
-    @Test
-    void completedIsNotOpenYet() {
-        BusinessException e = assertThrows(BusinessException.class,
-                () -> service.changeStatus(EMPLOYER, APPLICATION_ID, ApplicationStatus.COMPLETED));
-
-        assertEquals(ErrorCode.INVALID_STATUS_TRANSITION, e.getCode());
-        verifyNoInteractions(stateMachine, notifications);
-    }
-
     // ---- US 4.4
 
     @Test
@@ -222,6 +213,69 @@ class ApplicationStatusChangeTest {
 
         BusinessException e = assertThrows(BusinessException.class,
                 () -> service.changeStatus(other, APPLICATION_ID, ApplicationStatus.ACCEPTED));
+
+        assertEquals(ErrorCode.NOT_FOUND, e.getCode());
+        verifyNoInteractions(stateMachine, notifications);
+    }
+
+    // ---- US 4.7
+
+    @Test
+    void studentMarksCompletedAndEmployerIsNotified() {
+        application.setStatus(ApplicationStatus.ACCEPTED);
+
+        service.changeStatus(STUDENT, APPLICATION_ID, ApplicationStatus.COMPLETED);
+
+        verify(stateMachine).transition(application, ApplicationStatus.COMPLETED, ActorType.STUDENT, STUDENT_ID, null);
+        verify(notifications).notify(eq(EMPLOYER_ID), eq(NotificationType.APPLICATION_COMPLETED),
+                eq("Barista: the application was marked as completed"), eq(NotificationTargetType.APPLICATION),
+                eq(APPLICATION_ID));
+        verify(headcount, never()).closeIfFilled(any());
+    }
+
+    @Test
+    void employerMarksCompletedAndStudentIsNotified() {
+        application.setStatus(ApplicationStatus.ACCEPTED);
+
+        service.changeStatus(EMPLOYER, APPLICATION_ID, ApplicationStatus.COMPLETED);
+
+        verify(stateMachine).transition(application, ApplicationStatus.COMPLETED, ActorType.EMPLOYER, EMPLOYER_ID, null);
+        verify(notifications).notify(eq(STUDENT_ID), eq(NotificationType.APPLICATION_COMPLETED),
+                eq("Barista: the application was marked as completed"), eq(NotificationTargetType.APPLICATION),
+                eq(APPLICATION_ID));
+        verify(headcount, never()).closeIfFilled(any());
+    }
+
+    @Test
+    void completedOutsideAcceptedIsRefusedWithoutNotification() {
+        // the state machine allows COMPLETED only from ACCEPTED
+        stateMachineRefuses();
+
+        for (CurrentUser user : new CurrentUser[] {STUDENT, EMPLOYER}) {
+            BusinessException e = assertThrows(BusinessException.class,
+                    () -> service.changeStatus(user, APPLICATION_ID, ApplicationStatus.COMPLETED));
+            assertEquals(ErrorCode.INVALID_STATUS_TRANSITION, e.getCode());
+        }
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void filledAndClosedPostingStillAllowsCompleted() {
+        posting.setStatus(PostingStatus.CLOSED);
+        application.setStatus(ApplicationStatus.ACCEPTED);
+
+        service.changeStatus(STUDENT, APPLICATION_ID, ApplicationStatus.COMPLETED);
+
+        verify(stateMachine).transition(application, ApplicationStatus.COMPLETED, ActorType.STUDENT, STUDENT_ID, null);
+    }
+
+    @Test
+    void otherStudentCannotMarkCompleted() {
+        application.setStatus(ApplicationStatus.ACCEPTED);
+        CurrentUser other = new CurrentUser(88L, Role.STUDENT);
+
+        BusinessException e = assertThrows(BusinessException.class,
+                () -> service.changeStatus(other, APPLICATION_ID, ApplicationStatus.COMPLETED));
 
         assertEquals(ErrorCode.NOT_FOUND, e.getCode());
         verifyNoInteractions(stateMachine, notifications);
