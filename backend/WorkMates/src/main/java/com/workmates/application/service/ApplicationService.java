@@ -88,7 +88,7 @@ public class ApplicationService {
     /**
      * A manual status change (architecture section 8.3). Reads the posting ID, locks the posting, then reads the
      * application again so it sees what other transactions committed. A caller who does not own the posting
-     * (employer) or the application (student) gets 404. {@code COMPLETED} is not open yet (US 4.7).
+     * (employer) or the application (student) gets 404. Either side may mark an accepted application completed.
      */
     @Transactional
     public ApplicationResponse changeStatus(CurrentUser user, Long applicationId, ApplicationStatus to) {
@@ -103,9 +103,8 @@ public class ApplicationService {
             throw new BusinessException(ErrorCode.NOT_FOUND);
         }
         if (to == ApplicationStatus.COMPLETED) {
-            throw invalidTransition(application);
-        }
-        if (employer) {
+            markCompleted(posting, application, employer, user.getId());
+        } else if (employer) {
             advanceByEmployer(posting, application, to, user.getId());
         } else {
             answerOffer(posting, application, to, user.getId());
@@ -143,8 +142,15 @@ public class ApplicationService {
         }
     }
 
-    private static BusinessException invalidTransition(Application application) {
-        return new BusinessException(ErrorCode.INVALID_STATUS_TRANSITION,
-                ErrorCode.INVALID_STATUS_TRANSITION.getDefaultMessage() + " Current status: " + application.getStatus());
+    /**
+     * US 4.7. The state machine allows only {@code ACCEPTED -> COMPLETED}. The other side is told. Headcount does
+     * not change, because {@code ACCEPTED} and {@code COMPLETED} both count as hired, so no {@code closeIfFilled}.
+     */
+    private void markCompleted(Posting posting, Application application, boolean byEmployer, Long userId) {
+        stateMachine.transition(application, ApplicationStatus.COMPLETED,
+                byEmployer ? ActorType.EMPLOYER : ActorType.STUDENT, userId, null);
+        notifications.notify(byEmployer ? application.getStudentId() : posting.getEmployerId(),
+                NotificationType.APPLICATION_COMPLETED, NotificationMessages.applicationCompleted(posting.getTitle()),
+                NotificationTargetType.APPLICATION, application.getId());
     }
 }
