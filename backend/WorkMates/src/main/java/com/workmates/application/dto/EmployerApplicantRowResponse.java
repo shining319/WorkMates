@@ -10,6 +10,7 @@ public record EmployerApplicantRowResponse(
         Long applicationId,
         Long studentId,
         String studentName,
+        String major,
         int matchPercent,
         ApplicationStatus status,
         Instant applicationDate) {
