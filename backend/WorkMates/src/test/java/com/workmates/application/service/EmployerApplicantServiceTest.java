@@ -52,6 +52,12 @@ class EmployerApplicantServiceTest {
         job.setTags(new HashSet<>(Set.of(new Tag("english"))));
         job.setTimeSlots(new ArrayList<>(List.of(new TimeSlot(6, 540, 1020))));
         when(postings.findById(7L)).thenReturn(Optional.of(job));
+        // Each displayed row reads the current programme from the existing profile DTO.
+        when(students.get(any())).thenAnswer(invocation -> {
+            StudentProfileResponse profile = new StudentProfileResponse();
+            profile.setMajor("Software Engineering");
+            return profile;
+        });
     }
 
     @Test
@@ -87,6 +93,7 @@ class EmployerApplicantServiceTest {
         assertEquals(2, result.getTotalElements());
         assertEquals(List.of(101L, 102L), result.getContent().stream().map(row -> row.applicationId()).toList());
         assertEquals(100, result.getContent().get(0).matchPercent());
+        assertEquals("Software Engineering", result.getContent().get(0).major());
         assertEquals(0, result.getContent().get(1).matchPercent());
         verify(students, never()).matchInput(3L);
     }
@@ -130,6 +137,10 @@ class EmployerApplicantServiceTest {
         when(users.findById(1L)).thenReturn(Optional.of(user(1L)));
         StudentProfileResponse profile = new StudentProfileResponse();
         profile.setPhone("0871234567");
+        profile.setMajor("Software Engineering");
+        profile.setYearOfStudy("Year 2");
+        profile.setTags(List.of(com.workmates.profile.dto.TagResponse.from(new Tag("english"))));
+        profile.setTimeSlots(List.of(com.workmates.common.timeslot.TimeSlotDto.from(new TimeSlot(6, 540, 1020))));
         profile.setExpectedHourlyRate(new BigDecimal("14.00"));
         when(students.get(1L)).thenReturn(profile);
         when(students.matchInput(1L)).thenReturn(input(true));
@@ -140,6 +151,12 @@ class EmployerApplicantServiceTest {
         assertEquals(ApplicationStatus.REVIEWED, result.status());
         assertEquals(100, result.matchBreakdown().overallPercent());
         assertNotNull(result.profile());
+        assertEquals("Software Engineering", result.profile().getMajor());
+        assertEquals("Year 2", result.profile().getYearOfStudy());
+        assertEquals(1, result.profile().getTags().size());
+        assertEquals(1, result.profile().getTimeSlots().size());
+        assertEquals(new BigDecimal("14.00"), result.profile().getExpectedHourlyRate());
+        assertEquals(Instant.parse("2026-11-01T10:00:00Z"), result.applicationDate());
         assertEquals(1, result.matchBreakdown().jobSlotCoverage().size());
     }
 
