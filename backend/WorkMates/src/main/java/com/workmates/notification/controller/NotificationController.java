@@ -33,7 +33,7 @@ public class NotificationController {
     @Operation(summary = "My notifications, newest first, 20 per page")
     public Result<List<NotificationResponse>> list(CurrentUser user,
             @RequestParam(defaultValue = "0") int page) {
-        Page<NotificationResponse> found = centre.list(user.getId(), user.getRole(), page);
+        Page<NotificationResponse> found = centre.list(user.getId(), page);
         return Result.ok(found.getContent(), new PageInfo(found.getNumber(), found.getSize(),
                 found.getTotalElements(), found.getTotalPages()));
     }
@@ -45,9 +45,9 @@ public class NotificationController {
     }
 
     @PatchMapping("/{notificationId}/read")
-    @Operation(summary = "Mark my notification read and return its target link")
+    @Operation(summary = "Mark my notification read and return its target identifiers")
     public Result<NotificationResponse> markRead(CurrentUser user, @PathVariable Long notificationId) {
-        return Result.ok(centre.markRead(user.getId(), user.getRole(), notificationId));
+        return Result.ok(centre.markRead(user.getId(), notificationId));
     }
 
     @PatchMapping("/read-all")
