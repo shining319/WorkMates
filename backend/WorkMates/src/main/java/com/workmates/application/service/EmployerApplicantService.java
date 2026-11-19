@@ -104,7 +104,7 @@ public class EmployerApplicantService {
         List<EmployerApplicantRowResponse> result = scored.subList(from, to).stream()
                 .map(item -> new EmployerApplicantRowResponse(
                         item.application().getId(), item.student().getId(), item.student().getName(),
-                        item.matchPercent(), item.application().getStatus(), item.application().getCreatedAt()))
+                        students.get(item.student().getId()).getMajor(), item.matchPercent(), item.application().getStatus(), item.application().getCreatedAt()))
                 .toList();
         return new PageImpl<>(result, PageRequest.of(page, PAGE_SIZE), scored.size());
     }
