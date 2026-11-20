@@ -88,7 +88,7 @@ class EmployerApplicantServiceTest {
         when(students.matchInput(1L)).thenReturn(input(true));
         when(students.matchInput(2L)).thenReturn(input(false));
 
-        var result = service.list(20L, 7L, ApplicationStatus.APPLIED, "matchScore", "desc", 0);
+        var result = service.list(20L, 7L, List.of(ApplicationStatus.APPLIED), "matchScore", "desc", 0);
 
         assertEquals(2, result.getTotalElements());
         assertEquals(List.of(101L, 102L), result.getContent().stream().map(row -> row.applicationId()).toList());
@@ -179,6 +179,25 @@ class EmployerApplicantServiceTest {
                 () -> service.list(20L, 7L, null, "unknown", "desc", 0));
         assertEquals(ErrorCode.VALIDATION_FAILED, error.getCode());
         verify(applications, never()).findByPostingId(any());
+    }
+
+    @Test
+    void filtersBySeveralStatusesAtOnce() {
+        // The employer's "Hired" tab asks for ACCEPTED and COMPLETED together.
+        Application accepted = application(101L, 1L, ApplicationStatus.ACCEPTED, "2026-11-01T10:00:00Z");
+        Application completed = application(102L, 2L, ApplicationStatus.COMPLETED, "2026-11-02T10:00:00Z");
+        Application offer = application(103L, 3L, ApplicationStatus.OFFER, "2026-11-03T10:00:00Z");
+        when(applications.findByPostingId(7L)).thenReturn(List.of(accepted, completed, offer));
+        when(users.findAllById(List.of(1L, 2L))).thenReturn(List.of(user(1L), user(2L)));
+        when(students.matchInput(1L)).thenReturn(input(true));
+        when(students.matchInput(2L)).thenReturn(input(true));
+
+        var result = service.list(20L, 7L, List.of(ApplicationStatus.ACCEPTED, ApplicationStatus.COMPLETED),
+                "applicationDate", "desc", 0);
+
+        assertEquals(2, result.getTotalElements());
+        assertEquals(List.of(102L, 101L), result.getContent().stream().map(row -> row.applicationId()).toList());
+        verify(students, never()).matchInput(3L);
     }
 
     private Application application(Long id, Long studentId, ApplicationStatus status, String date) {
