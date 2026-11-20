@@ -33,11 +33,12 @@ public class EmployerApplicantController {
     }
 
     @GetMapping
-    @Operation(summary = "List applicants for my posting, filter by status, sort by match or date, 20/page")
+    @Operation(summary = "List applicants for my posting, filter by one or more statuses, sort by match or date, 20/page")
     public Result<List<EmployerApplicantRowResponse>> list(
             CurrentUser employer,
             @PathVariable Long postingId,
-            @RequestParam(required = false) ApplicationStatus status,
+            @Parameter(description = "One or more statuses, e.g. ACCEPTED,COMPLETED. Omit for all")
+            @RequestParam(required = false) List<ApplicationStatus> status,
             @Parameter(description = "matchScore or applicationDate")
             @RequestParam(defaultValue = "matchScore") String sortBy,
             @Parameter(description = "desc or asc")

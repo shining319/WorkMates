@@ -49,9 +49,10 @@ public class EmployerApplicantService {
      * Filter and sort the entire applicant set BEFORE pagination. Sorting by the exact (not rounded)
      * match score ensures a later page never contains a higher-ranked applicant than an earlier page.
      * The score is recalculated using the student's current profile on every request.
+     * {@code statuses} keeps applications in any of the given statuses; null or empty means all.
      */
     @Transactional(readOnly = true)
-    public Page<EmployerApplicantRowResponse> list(Long employerId, Long postingId, ApplicationStatus status,
+    public Page<EmployerApplicantRowResponse> list(Long employerId, Long postingId, List<ApplicationStatus> statuses,
                                                    String sortBy, String direction, int page) {
         validatePaging(page, sortBy, direction);
         Posting posting = ownedPosting(employerId, postingId);
@@ -59,7 +60,7 @@ public class EmployerApplicantService {
         boolean ascending = direction.equalsIgnoreCase("asc");
 
         List<Application> filtered = applications.findByPostingId(postingId).stream()
-                .filter(a -> status == null || a.getStatus() == status)
+                .filter(a -> statuses == null || statuses.isEmpty() || statuses.contains(a.getStatus()))
                 .toList();
         if (filtered.isEmpty()) {
             return new PageImpl<>(List.of(), PageRequest.of(page, PAGE_SIZE), 0);
