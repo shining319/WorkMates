@@ -1,7 +1,15 @@
 import { CircleAlert, Plus, X } from 'lucide-react'
-import { useFieldArray, useFormContext, useWatch } from 'react-hook-form'
+import {
+  Controller,
+  useFieldArray,
+  useFormContext,
+  useWatch,
+} from 'react-hook-form'
 import { Button } from '../../../shared/ui/Button'
-import { Select } from '../../../shared/ui/Select'
+import {
+  SelectMenu,
+  type SelectMenuOption,
+} from '../../../shared/ui/SelectMenu'
 import {
   DAYS,
   END_OPTIONS,
@@ -47,9 +55,35 @@ export function TimeSlotEditor({
 }) {
   const {
     control,
-    register,
     formState: { errors },
   } = useFormContext<TimeSlotsForm>()
+
+  /** 一行里的一个下拉框（星期、开始或结束）。SelectMenu 是受控组件，用 Controller 绑定到表单 */
+  function slotSelect(
+    index: number,
+    part: 'day' | 'start' | 'end',
+    ariaLabel: string,
+    invalid: boolean,
+    options: SelectMenuOption[],
+  ) {
+    return (
+      <Controller
+        control={control}
+        name={`timeSlots.${index}.${part}`}
+        render={({ field }) => (
+          <SelectMenu
+            aria-label={ariaLabel}
+            aria-invalid={invalid}
+            options={options}
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            ref={field.ref}
+          />
+        )}
+      />
+    )
+  }
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'timeSlots',
@@ -92,30 +126,27 @@ export function TimeSlotEditor({
               {/* 手机上分两行：第一行"星期 + 删除"，第二行"开始 to 结束"；宽屏（sm 以上）排成一行 */}
               <div className="grid grid-cols-[1fr_auto] items-center gap-2 sm:flex">
                 <div className="sm:w-24">
-                  <Select
-                    aria-label={`Day, ${label}`}
-                    aria-invalid={invalid}
-                    options={DAYS}
-                    {...register(`timeSlots.${index}.day`)}
-                  />
+                  {slotSelect(index, 'day', `Day, ${label}`, invalid, DAYS)}
                 </div>
                 <div className="col-span-2 row-start-2 flex items-center gap-2 sm:col-auto sm:row-auto">
                   <div className="flex-1 sm:w-28 sm:flex-none">
-                    <Select
-                      aria-label={`Start time, ${label}`}
-                      aria-invalid={invalid}
-                      options={START_OPTIONS}
-                      {...register(`timeSlots.${index}.start`)}
-                    />
+                    {slotSelect(
+                      index,
+                      'start',
+                      `Start time, ${label}`,
+                      invalid,
+                      START_OPTIONS,
+                    )}
                   </div>
                   <span className="text-caption text-text-muted">to</span>
                   <div className="flex-1 sm:w-28 sm:flex-none">
-                    <Select
-                      aria-label={`End time, ${label}`}
-                      aria-invalid={invalid}
-                      options={END_OPTIONS}
-                      {...register(`timeSlots.${index}.end`)}
-                    />
+                    {slotSelect(
+                      index,
+                      'end',
+                      `End time, ${label}`,
+                      invalid,
+                      END_OPTIONS,
+                    )}
                   </div>
                 </div>
                 <Button

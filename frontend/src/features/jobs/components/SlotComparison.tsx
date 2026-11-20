@@ -153,12 +153,12 @@ function Grid({
   )
 }
 
-function Legend() {
+function Legend({ freeLabel }: { freeLabel: string }) {
   return (
     <ul className="hidden flex-wrap gap-x-5 gap-y-1 border-t border-border pt-3 text-caption text-text-muted sm:flex">
       <li className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-3.5 border border-success/40 bg-success-bg" />
-        Your free time
+        {freeLabel}
       </li>
       <li className="inline-flex items-center gap-1.5">
         <span className="h-2.5 w-3.5 rounded-xs bg-text-strong" />
@@ -208,15 +208,18 @@ function Coverage({ slot }: { slot: SlotCoverage }) {
 /**
  * 职位时间段和学生空闲时间的对比（设计 05）：一周网格、图例、每个时间段一行的覆盖说明。
  * 职位至少有一个时间段（后端要求），所以 `coverage` 不会是空的。
+ * `forEmployer`：雇主看申请人时用（设计 14），标题和说明改成雇主的角度。
  */
 export function SlotComparison({
   coverage,
   freeSlots,
   timePercent,
+  forEmployer = false,
 }: {
   coverage: SlotCoverage[]
   freeSlots: TimeSlot[]
   timePercent: number
+  forEmployer?: boolean
 }) {
   const sorted = [...coverage].sort(
     (a, b) =>
@@ -227,7 +230,9 @@ export function SlotComparison({
     <section aria-labelledby="slot-comparison">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="slot-comparison" className="text-title">
-          Shifts vs your free time
+          {forEmployer
+            ? 'Free time vs your shifts'
+            : 'Shifts vs your free time'}
         </h2>
         <span className="text-caption text-text-muted tabular-nums">
           {timePercent}% of shift time covered
@@ -235,7 +240,9 @@ export function SlotComparison({
       </div>
       <div className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:pb-3">
         <Grid coverage={sorted} freeSlots={freeSlots} />
-        <Legend />
+        <Legend
+          freeLabel={forEmployer ? "Student's free time" : 'Your free time'}
+        />
         <ul className="divide-y divide-border rounded-md border border-border">
           {sorted.map((slot) => (
             <li
@@ -254,8 +261,9 @@ export function SlotComparison({
         </ul>
         {freeSlots.length === 0 && (
           <p className="text-caption text-text-muted">
-            You have no free time slots yet. Add them in your profile to see how
-            well the shifts fit.
+            {forEmployer
+              ? 'This student has no free time slots yet.'
+              : 'You have no free time slots yet. Add them in your profile to see how well the shifts fit.'}
           </p>
         )}
       </div>

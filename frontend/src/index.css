@@ -59,6 +59,24 @@
   --color-match-mid: #dd5b00;
   --color-match-low: #a39e98;
 
+  /* 申请状态的文字色和底色（设计系统 status-*），总是和文字标签一起用 */
+  --color-status-applied: #615d59;
+  --color-status-applied-bg: #efeeec;
+  --color-status-reviewed: #1f6fb8;
+  --color-status-reviewed-bg: #e3f0fc;
+  --color-status-interview: #391c57;
+  --color-status-interview-bg: #f1e7fc;
+  --color-status-offer: #793400;
+  --color-status-offer-bg: #fcefe5;
+  --color-status-accepted: #0f7a27;
+  --color-status-accepted-bg: #e8f6eb;
+  --color-status-completed: #1d6f6c;
+  --color-status-completed-bg: #e2f3f2;
+  --color-status-rejected: #a61b1b;
+  --color-status-rejected-bg: #fdecec;
+  --color-status-declined: #615d59;
+  --color-status-declined-bg: #efeeec;
+
   /* 工作类型徽标的颜色 */
   --color-jobtype-part-time: #1d6f6c;
   --color-jobtype-part-time-bg: #e2f3f2;

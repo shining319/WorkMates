@@ -24,6 +24,18 @@ export function formatDate(iso: string): string {
   return `${day} ${month}`
 }
 
+const dublinTime = new Intl.DateTimeFormat('en-IE', {
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23',
+  timeZone: 'Europe/Dublin',
+})
+
+/** ISO 时间 -> `"24 Sep, 09:12"`（都柏林时间，24 小时制） */
+export function formatDateTime(iso: string): string {
+  return `${formatDate(iso)}, ${dublinTime.format(new Date(iso))}`
+}
+
 /** 每周工时最多保留一位小数：`8` -> `"8"`，`7.5` -> `"7.5"` */
 export function formatHours(hours: number): string {
   return String(Number(hours.toFixed(1)))
