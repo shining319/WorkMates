@@ -46,13 +46,20 @@ function Row({
 /**
  * 学生看到的匹配明细（设计 05 侧栏）：总分圆环，加时间、技能、薪资三项。
  * 三项各占三分之一，总分是它们的平均。
+ * `forEmployer`：雇主看申请人时用（设计 14），文字改成第三人称。
  */
-export function MatchBreakdown({ breakdown }: { breakdown: Breakdown }) {
+export function MatchBreakdown({
+  breakdown,
+  forEmployer = false,
+}: {
+  breakdown: Breakdown
+  forEmployer?: boolean
+}) {
   const hours = shiftHours(breakdown)
   const skills = `${breakdown.matchedSkills} of ${breakdown.requiredSkills} skills`
   const pay =
     breakdown.expectedHourlyRate === null
-      ? `${formatEur(breakdown.jobHourlyRate)}/h · you have not set an expected rate`
+      ? `${formatEur(breakdown.jobHourlyRate)}/h · ${forEmployer ? 'the student has' : 'you have'} not set an expected rate`
       : `${formatEur(breakdown.jobHourlyRate)}/h vs ${formatEur(breakdown.expectedHourlyRate)} expected`
 
   return (
@@ -60,7 +67,9 @@ export function MatchBreakdown({ breakdown }: { breakdown: Breakdown }) {
       <div className="flex items-center gap-4">
         <MatchScore percent={breakdown.overallPercent} size="lg" />
         <p className="text-caption text-text-muted">
-          Based on your free time, skills and expected pay.
+          {forEmployer
+            ? 'Match for this posting.'
+            : 'Based on your free time, skills and expected pay.'}
         </p>
       </div>
       <Row

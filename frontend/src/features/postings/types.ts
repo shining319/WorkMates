@@ -1,5 +1,10 @@
-import type { Area, JobType } from '../../shared/lib/constants'
-import type { Tag, TimeSlot } from '../profile/types'
+import type {
+  ApplicationStatus,
+  Area,
+  JobType,
+} from '../../shared/lib/constants'
+import type { MatchBreakdown } from '../jobs/types'
+import type { StudentProfile, Tag, TimeSlot } from '../profile/types'
 
 export type PostingStatus = 'OPEN' | 'CLOSED'
 /** 关闭原因：雇主手动关闭，或招满自动关闭 */
@@ -63,4 +68,34 @@ export interface PostingRequest {
   headcount: number
   tags: string[]
   timeSlots: TimeSlot[]
+}
+
+/** 申请人列表的排序：匹配度或申请日期，都是降序 */
+export type ApplicantSort = 'matchScore' | 'applicationDate'
+
+/** `GET /api/postings/{id}/applicants` 的一行。匹配度按学生当前的档案计算。 */
+export interface ApplicantRow {
+  applicationId: number
+  studentId: number
+  studentName: string
+  /** 没填时是 null */
+  major: string | null
+  matchPercent: number
+  status: ApplicationStatus
+  applicationDate: string
+}
+
+/** `GET /api/postings/{id}/applicants/{applicationId}`：学生当前的档案、联系方式和匹配明细。 */
+export interface ApplicantDetail {
+  applicationId: number
+  postingId: number
+  studentId: number
+  studentName: string
+  campusEmail: string
+  /** 没填时是 null */
+  phone: string | null
+  status: ApplicationStatus
+  applicationDate: string
+  profile: StudentProfile
+  matchBreakdown: MatchBreakdown
 }

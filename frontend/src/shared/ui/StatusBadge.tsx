@@ -1,44 +1,49 @@
 // 状态徽标：圆点 + 文字，不只靠颜色区分。
 // 职位状态（Open / Closed）和申请状态（Applied ... Completed）共用这一个徽标。
-import type { ApplicationStatus } from '../lib/constants'
+import {
+  APPLICATION_STATUS_LABEL,
+  type ApplicationStatus,
+} from '../lib/constants'
+import { STATUS_COLOR } from '../lib/statusColor'
 
 type Status = 'OPEN' | 'CLOSED' | ApplicationStatus
 
-const progress = 'bg-info-bg text-primary-pressed'
 const good = 'bg-success-bg text-success-text'
-const bad = 'bg-danger-bg text-danger-text'
 const neutral = 'bg-neutral-bg text-text-muted'
 
-const style: Record<Status, { label: string; className: string }> = {
-  OPEN: { label: 'Open', className: good },
-  CLOSED: { label: 'Closed', className: neutral },
-  APPLIED: { label: 'Applied', className: progress },
-  REVIEWED: { label: 'Reviewed', className: progress },
-  INTERVIEW: { label: 'Interview', className: progress },
-  OFFER: { label: 'Offer', className: good },
-  ACCEPTED: { label: 'Accepted', className: good },
-  DECLINED: { label: 'Declined', className: bad },
-  REJECTED: { label: 'Rejected', className: bad },
-  COMPLETED: { label: 'Completed', className: neutral },
+const label: Record<Status, string> = {
+  OPEN: 'Open',
+  CLOSED: 'Closed',
+  ...APPLICATION_STATUS_LABEL,
 }
 
-const reasonLabel = { MANUAL: 'Manual', FILLED: 'Filled' }
+const className: Record<Status, string> = {
+  OPEN: good,
+  CLOSED: neutral,
+  ...STATUS_COLOR,
+}
+
+// 职位的关闭原因（MANUAL、FILLED）和申请被系统拒绝的原因（POSITION_FILLED）
+const reasonLabel = {
+  MANUAL: 'Manual',
+  FILLED: 'Filled',
+  POSITION_FILLED: 'Position filled',
+}
 
 export function StatusBadge({
   status,
   reason,
 }: {
   status: Status
-  /** 关闭原因，只有 Closed 的职位有 */
+  /** Closed 职位的关闭原因，或招满时被系统拒绝的申请的原因 */
   reason?: keyof typeof reasonLabel | null
 }) {
-  const { label, className } = style[status]
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-caption leading-5 font-medium whitespace-nowrap ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-caption leading-5 font-medium whitespace-nowrap ${className[status]}`}
     >
       <span aria-hidden className="size-1.5 rounded-full bg-current" />
-      {label}
+      {label[status]}
       {reason && <span className="opacity-80">· {reasonLabel[reason]}</span>}
     </span>
   )

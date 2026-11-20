@@ -22,7 +22,7 @@ import { Field } from '../../../shared/ui/Field'
 import { Input } from '../../../shared/ui/Input'
 import { ItemUnavailable } from '../../../shared/ui/ItemUnavailable'
 import { RadioGroup } from '../../../shared/ui/RadioGroup'
-import { Select } from '../../../shared/ui/Select'
+import { SelectMenu } from '../../../shared/ui/SelectMenu'
 import { TagInput } from '../../../shared/ui/TagInput'
 import { Textarea } from '../../../shared/ui/Textarea'
 import { JobCard } from '../../jobs/components/JobCard'
@@ -267,10 +267,20 @@ function PostingEditor({ posting }: { posting?: Posting }) {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-[180px_minmax(0,1fr)]">
                 <Field label="Location area" error={errors.area?.message}>
                   {(props) => (
-                    <Select
-                      options={AREA_OPTIONS}
-                      {...props}
-                      {...register('area')}
+                    // SelectMenu 是受控组件，不能用 register，要用 Controller
+                    <Controller
+                      control={control}
+                      name="area"
+                      render={({ field }) => (
+                        <SelectMenu
+                          options={AREA_OPTIONS}
+                          {...props}
+                          value={field.value}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          ref={field.ref}
+                        />
+                      )}
                     />
                   )}
                 </Field>

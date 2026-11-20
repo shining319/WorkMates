@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 interface Tab {
   id: string
   label: string
@@ -11,19 +13,22 @@ interface TabsProps {
   tabs: Tab[]
   value: string
   onChange: (id: string) => void
+  /** 放在最后一个标签页后面的内容，例如一个下拉框 */
+  extra?: ReactNode
 }
 
 /**
  * 标签页（设计稿的 Tabs）：当前页签有下划线，旁边可以带数量。
  * 它只负责"选哪一个"，下面的内容由页面自己根据 value 显示。
  * 当前页签用 aria-pressed 标出，读屏软件会读成"已按下"。
+ * 窄屏放不下时换行。
  */
-export function Tabs({ label, tabs, value, onChange }: TabsProps) {
+export function Tabs({ label, tabs, value, onChange, extra }: TabsProps) {
   return (
     <div
       role="group"
       aria-label={label}
-      className="flex gap-5 border-b border-border"
+      className="flex flex-wrap items-end gap-x-5 border-b border-border"
     >
       {tabs.map((tab) => {
         const active = tab.id === value
@@ -44,6 +49,7 @@ export function Tabs({ label, tabs, value, onChange }: TabsProps) {
           </button>
         )
       })}
+      {extra && <div className="pb-1">{extra}</div>}
     </div>
   )
 }
