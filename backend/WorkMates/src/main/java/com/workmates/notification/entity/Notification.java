@@ -49,6 +49,13 @@ public class Notification {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /** Mark unread notifications once. Reading the same item twice is harmless. */
+    public void markRead(Instant when) {
+        if (this.readAt == null) {
+            this.readAt = when;
+        }
+    }
+
     public Notification(Long recipientId, NotificationType type, String message,
                         NotificationTargetType targetType, Long targetId) {
         this.recipientId = recipientId;
