@@ -1,0 +1,36 @@
+# Shared settings. Every secret or host-specific value comes from an environment variable.
+# The profile (local or prod) is chosen with SPRING_PROFILES_ACTIVE.
+spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  application:
+    name: WorkMates
+  datasource:
+    url: ${DB_URL}                 # e.g. jdbc:postgresql://localhost:5432/workmates
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # The schema is applied by hand, so the app refuses to start if entities and tables differ
+      ddl-auto: validate
+    # No lazy loading in controllers; services return DTOs
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC           # timestamps are stored and sent as UTC
+        default_batch_fetch_size: 50
+
+jwt:
+  secret: ${JWT_SECRET}            # Base64, at least 32 random bytes; changing it logs everyone out
+  ttl: ${JWT_TTL}                  # how long a token stays valid, e.g. 7d or 12h
+
+# Swagger UI is the team's API reference, so it stays on in every profile
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+    persist-authorization: true    # keep the pasted token after a page refresh

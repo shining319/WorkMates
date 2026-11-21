@@ -1,0 +1,4 @@
+# Everything secret or host-specific comes from environment variables (see application.yml).
+logging:
+  level:
+    com.workmates: INFO
