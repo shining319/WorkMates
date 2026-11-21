@@ -98,6 +98,7 @@ export const baseApi = createApi({
   // Posting：单个职位（按 id）；MyPostings：雇主的职位列表。
   // Applicants：某个职位的申请人列表和申请人详情；Application：单个申请（按 id）；
   // MyApplications：学生的申请列表。这三个在申请状态改变后一起失效。
+  // Notifications：通知列表；UnreadCount：铃铛上的未读数。标为已读后两个一起失效。
   tagTypes: [
     'Me',
     'StudentProfile',
@@ -108,6 +109,8 @@ export const baseApi = createApi({
     'Applicants',
     'Application',
     'MyApplications',
+    'Notifications',
+    'UnreadCount',
   ],
   endpoints: () => ({}),
 })

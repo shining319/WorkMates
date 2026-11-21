@@ -8,6 +8,7 @@ import { ApplicationDetailPage } from '../features/applications/pages/Applicatio
 import { MyApplicationsPage } from '../features/applications/pages/MyApplicationsPage'
 import { JobDetailPage } from '../features/jobs/pages/JobDetailPage'
 import { JobsPage } from '../features/jobs/pages/JobsPage'
+import { NotificationsPage } from '../features/notifications/pages/NotificationsPage'
 import { EmployerProfilePage } from '../features/profile/pages/EmployerProfilePage'
 import { StudentProfilePage } from '../features/profile/pages/StudentProfilePage'
 import { ApplicantDetailPage } from '../features/postings/pages/ApplicantDetailPage'
@@ -17,8 +18,7 @@ import { PostingDetailPage } from '../features/postings/pages/PostingDetailPage'
 import { PostingFormPage } from '../features/postings/pages/PostingFormPage'
 import { RequireRole } from './RequireRole'
 
-// 路由表。目前只有注册和角色要用的几个路由，每个功能做的时候再按架构文档 §9.5 补自己的路由，
-// 并把 PlaceholderPage（占位页）换成真正的页面。
+// 路由表。每个功能做的时候按架构文档 §9.5 补自己的路由。
 //
 // 怎么读：没有 `path` 只有 `element` 的项是"外壳"，它不对应网址，
 // 只是把 `children` 包起来。外壳里的 <Outlet /> 就是子路由页面显示的位置。
@@ -45,6 +45,8 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
+          // 两种角色都能进
+          { path: '/notifications', element: <NotificationsPage /> },
           {
             // 第二层守卫：只有学生能进
             element: <RequireRole allowed="STUDENT" />,
