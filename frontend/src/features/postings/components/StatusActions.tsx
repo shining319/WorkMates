@@ -1,44 +1,35 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { isApiError } from '../../../api/types'
 import {
   APPLICATION_STATUS_LABEL,
-  APPLICATION_STATUS_VALUES,
   type ApplicationStatus,
 } from '../../../shared/lib/constants'
 import { Button } from '../../../shared/ui/Button'
 import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog'
 import { useChangeApplicationStatusMutation } from '../../applications/api'
+import { statusChangeError } from '../../applications/statusError'
 
-// 雇主每次只能推进一步（设计 13 的按钮文字）。Offer 及以后雇主不能再改（US 4.7 的 Completed 以后再加）。
+// 雇主每次只能推进一步（设计 13 的按钮文字）。Offer 之后由学生回复；
+// 学生接受后，雇主和学生都能标记完成（US 4.7）。
 const NEXT: Partial<
   Record<ApplicationStatus, { to: ApplicationStatus; label: string }>
 > = {
   APPLIED: { to: 'REVIEWED', label: 'Mark reviewed' },
   REVIEWED: { to: 'INTERVIEW', label: 'Invite to interview' },
   INTERVIEW: { to: 'OFFER', label: 'Send offer' },
+  ACCEPTED: { to: 'COMPLETED', label: 'Mark as Completed' },
 }
+
+// 这些操作先确认：拒绝不能撤销，Offer 发出后不能撤回，Completed 之后不能再改
+type Confirming = 'REJECTED' | 'OFFER' | 'COMPLETED'
 
 // 只有这三个状态能拒绝；Offer 不能被雇主拒绝或撤回
 const CAN_REJECT: ApplicationStatus[] = ['APPLIED', 'REVIEWED', 'INTERVIEW']
 
 /**
- * 服务端的话，把末尾的状态枚举换成文字：
- * "This status change is not allowed. Current status: OFFER" -> "... Current status: Offer"
- */
-function errorMessage(error: unknown) {
-  if (!isApiError(error)) return 'Something went wrong. Please try again.'
-  return error.errorMsg.replace(/[A-Z]+$/, (word) =>
-    (APPLICATION_STATUS_VALUES as readonly string[]).includes(word)
-      ? APPLICATION_STATUS_LABEL[word as ApplicationStatus]
-      : word,
-  )
-}
-
-/**
- * 雇主改申请状态的按钮（US 4.3）：推进到下一步，或拒绝。
- * 拒绝和发 Offer 前先确认（Offer 发出后不能撤回）；Mark reviewed、Invite to interview 直接执行。
+ * 雇主改申请状态的按钮（US 4.3、4.7）：推进到下一步、拒绝，或把 Accepted 标记为完成。
+ * 拒绝、发 Offer、标记完成前先确认；Mark reviewed、Invite to interview 直接执行。
  * `compact`：申请人列表的每一行，小按钮加 X 图标；否则是申请人详情侧栏里的整宽按钮。
  * 当前状态没有可做的操作时什么都不显示。
  */
@@ -56,10 +47,8 @@ export function StatusActions({
   compact?: boolean
 }) {
   const [changeStatus, { isLoading }] = useChangeApplicationStatusMutation()
-  // 正在确认的目标状态：拒绝或发 Offer
-  const [confirming, setConfirming] = useState<'REJECTED' | 'OFFER' | null>(
-    null,
-  )
+  // 正在确认的目标状态
+  const [confirming, setConfirming] = useState<Confirming | null>(null)
   const next = NEXT[status]
   const canReject = CAN_REJECT.includes(status)
   if (!next && !canReject) return null
@@ -72,14 +61,14 @@ export function StatusActions({
       })
     } catch (error) {
       // 例如另一个标签页已经改过了。缓存已失效，页面会刷新成当前状态。
-      toast.error(errorMessage(error))
+      toast.error(statusChangeError(error))
     }
     setConfirming(null)
   }
 
   function onNext() {
     if (!next) return
-    if (next.to === 'OFFER') setConfirming('OFFER')
+    if (next.to === 'OFFER' || next.to === 'COMPLETED') setConfirming(next.to)
     else void change(next.to)
   }
 
@@ -145,6 +134,18 @@ export function StatusActions({
           confirmVariant="primary"
           busy={isLoading}
           onConfirm={() => void change('OFFER')}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
+      {confirming === 'COMPLETED' && (
+        <ConfirmDialog
+          open
+          title={`Mark ${studentName}'s job as completed?`}
+          description={`${studentName} will get a notification. A completed application cannot be changed.`}
+          confirmLabel="Mark as Completed"
+          confirmVariant="primary"
+          busy={isLoading}
+          onConfirm={() => void change('COMPLETED')}
           onCancel={() => setConfirming(null)}
         />
       )}

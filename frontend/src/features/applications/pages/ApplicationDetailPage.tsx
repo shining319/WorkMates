@@ -3,16 +3,21 @@ import { Link, useParams } from 'react-router'
 import { isApiError } from '../../../api/types'
 import {
   APPLICATION_STATUS_LABEL,
+  AREA_LABEL,
   type ApplicationStatus,
 } from '../../../shared/lib/constants'
+import { formatEur, formatHours } from '../../../shared/lib/format'
 import { Banner } from '../../../shared/ui/Banner'
 import { Button, ButtonLink } from '../../../shared/ui/Button'
 import { Card } from '../../../shared/ui/Card'
 import { ItemUnavailable } from '../../../shared/ui/ItemUnavailable'
 import { STATUS_COLOR } from '../../../shared/lib/statusColor'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
+import { useGetJobQuery } from '../../jobs/api'
+import { describeSlot } from '../../profile/timeSlots'
 import { useGetApplicationQuery } from '../api'
 import { StatusHistory } from '../components/StatusHistory'
+import { StudentActions } from '../components/StudentActions'
 import type { ApplicationDetail } from '../types'
 
 // 步骤条上的六步。Rejected 和 Declined 不在上面。
@@ -121,6 +126,66 @@ function EmployerContactCard({
   )
 }
 
+/**
+ * Offer 卡片（设计 09）：职位的关键信息 + Accept offer / Decline offer。
+ * 申请详情接口没有时薪、时长、时间段，另外请求一次职位详情；它还没回来或失败时只少这一行信息。
+ */
+function OfferCard({
+  application,
+  employerName,
+}: {
+  application: ApplicationDetail
+  employerName: string
+}) {
+  const { currentData: job } = useGetJobQuery(application.postingId)
+  const facts = job && [
+    `${formatEur(job.hourlyRate)}/h`,
+    `${formatHours(job.weeklyHours)} h/week`,
+    job.timeSlots.map(describeSlot).join(', '),
+    AREA_LABEL[job.area],
+  ]
+
+  return (
+    <Card featured className="flex flex-col gap-3 p-5">
+      <h2 className="text-title">{employerName} sent you an offer</h2>
+      <p className="text-body-sm text-text tabular-nums">
+        {facts && `${facts.join(' · ')}. `}
+        There is no deadline, but the offer ends if the posting fills first.
+      </p>
+      <StudentActions
+        applicationId={application.id}
+        postingId={application.postingId}
+        status={application.status}
+        employerName={employerName}
+      />
+    </Card>
+  )
+}
+
+/** Accepted 时的卡片：工作结束后由学生或雇主标记完成（US 4.7） */
+function CompleteCard({
+  application,
+  employerName,
+}: {
+  application: ApplicationDetail
+  employerName: string
+}) {
+  return (
+    <Card className="flex flex-col gap-3 p-5">
+      <h2 className="text-title">You accepted this job</h2>
+      <p className="text-body-sm text-text">
+        When the job is done, you or {employerName} can mark it as completed.
+      </p>
+      <StudentActions
+        applicationId={application.id}
+        postingId={application.postingId}
+        status={application.status}
+        employerName={employerName}
+      />
+    </Card>
+  )
+}
+
 function ApplicationDetailView({
   application,
 }: {
@@ -167,6 +232,15 @@ function ApplicationDetailView({
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <div className="flex flex-col gap-4">
+          {application.status === 'OFFER' && (
+            <OfferCard application={application} employerName={employerName} />
+          )}
+          {application.status === 'ACCEPTED' && (
+            <CompleteCard
+              application={application}
+              employerName={employerName}
+            />
+          )}
           <StatusHistory
             history={application.history}
             actorName={{
@@ -182,7 +256,7 @@ function ApplicationDetailView({
   )
 }
 
-// 学生的申请详情（设计 09，US 4.6）。Offer 卡片和 Accept / Decline 是 US 4.4，以后再加。
+// 学生的申请详情（设计 09，US 4.6）。Offer 卡片的 Accept / Decline 是 US 4.4，Mark as Completed 是 US 4.7。
 export function ApplicationDetailPage() {
   const id = Number(useParams().id)
   // id 不是数字时不发请求，直接当作不存在
