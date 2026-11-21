@@ -14,7 +14,7 @@ import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import { Tabs } from '../../../shared/ui/Tabs'
 import { useGetApplicantsQuery, useGetPostingQuery } from '../api'
 import { StatusActions } from '../components/StatusActions'
-import type { ApplicantRow, ApplicantSort } from '../types'
+import type { ApplicantRow, ApplicantSort, PostingDetail } from '../types'
 
 // 状态筛选：网址里的 ?status= 写法 -> 显示的文字和请求时传的状态。
 // Hired = Accepted + Completed，和页面顶部 "x of y places filled" 的 x 口径一致。
@@ -85,6 +85,21 @@ function useFilterCounts(postingId: number) {
   }
 }
 
+/**
+ * 招满横幅（设计 14b，US 4.5）："Barista is filled and closed. 5 remaining applications were set to Rejected."
+ * N 是招满时被系统自动拒绝的申请数；没有时只说第一句。
+ */
+function filledMessage(posting: PostingDetail) {
+  const n = posting.autoRejectedCount
+  const rest =
+    n === 0
+      ? ''
+      : n === 1
+        ? ' 1 remaining application was set to Rejected.'
+        : ` ${n} remaining applications were set to Rejected.`
+  return `${posting.title} is filled and closed.${rest}`
+}
+
 function ApplicantRowItem({
   postingId,
   applicant,
@@ -133,7 +148,8 @@ function ApplicantRowItem({
   )
 }
 
-// 某个职位的申请人（设计 13，US 4.2）；每行的推进和拒绝是 US 4.3。
+// 某个职位的申请人（设计 13，US 4.2）；每行的推进和拒绝是 US 4.3，Mark as Completed 是 US 4.7，
+// 招满横幅是 US 4.5。
 // 筛选、排序和页码都放在网址里：?status=HIRED&sort=applicationDate&page=2。
 export function ApplicantsPage() {
   const postingId = Number(useParams().id)
@@ -239,6 +255,10 @@ export function ApplicantsPage() {
           }
         />
       </div>
+
+      {info?.closeReason === 'FILLED' && (
+        <Banner tone="success">{filledMessage(info)}</Banner>
+      )}
 
       <Tabs
         label="Applicant status"

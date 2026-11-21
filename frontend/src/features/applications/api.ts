@@ -27,6 +27,7 @@ export const applicationsApi = baseApi.injectEndpoints({
 
     // 所有手动改状态都走这一个接口。postingId 只用来让这个职位的计数（已录用、进行中）失效。
     // 失败时也让缓存失效：多半是别人已经改过了，重新请求后页面显示最新状态。
+    // JobList：学生接受 Offer 可能让职位招满关闭，职位列表里要消失（US 4.5）。
     changeApplicationStatus: build.mutation<
       ApplicationChanged,
       { id: number; postingId: number; status: ApplicationStatus }
@@ -42,6 +43,7 @@ export const applicationsApi = baseApi.injectEndpoints({
         'Applicants',
         'MyApplications',
         'MyPostings',
+        'JobList',
       ],
     }),
   }),

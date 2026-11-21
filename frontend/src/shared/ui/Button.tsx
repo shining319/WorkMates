@@ -31,13 +31,25 @@ const sizeClass: Record<Size, string> = {
 
 // Button 和 ButtonLink 外观一样，所以样式放在一个函数里共用。
 // active:scale-96 是设计稿里的"按下去微微缩小"。
-function buttonClass(variant: Variant, size: Size, className: string) {
-  return `inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap transition active:scale-96 disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass[size]} ${variantClass[variant]} ${className}`
+// shape="rounded"：把胶囊（primary、secondary）换成 8px 圆角。设计系统建议表格、列表行这类界面里的主按钮这样用。
+function buttonClass(
+  variant: Variant,
+  size: Size,
+  className: string,
+  shape?: 'rounded',
+) {
+  const look =
+    shape === 'rounded'
+      ? variantClass[variant].replace('rounded-full', 'rounded-md')
+      : variantClass[variant]
+  return `inline-flex items-center justify-center gap-2 font-medium whitespace-nowrap transition active:scale-96 disabled:cursor-not-allowed disabled:opacity-50 ${sizeClass[size]} ${look} ${className}`
 }
 
 interface StyleProps {
   variant?: Variant
   size?: Size
+  /** 不传时 primary、secondary 是胶囊，其他是 8px 圆角；传 'rounded' 一律 8px 圆角 */
+  shape?: 'rounded'
 }
 
 // 继承原生 <button> 的所有属性（onClick、disabled 等），再加上自己的 variant 和 size。
@@ -51,13 +63,14 @@ export function Button({
   // 所以默认改成 "button"，需要提交时再手动传 type="submit"。
   type = 'button',
   className = '',
+  shape,
   // ...props 是"其余所有属性"，下面用 {...props} 原样传给 <button>。
   ...props
 }: ButtonProps) {
   return (
     <button
       type={type}
-      className={buttonClass(variant, size, className)}
+      className={buttonClass(variant, size, className, shape)}
       {...props}
     />
   )
@@ -68,7 +81,10 @@ export function ButtonLink({
   variant = 'primary',
   size = 'md',
   className = '',
+  shape,
   ...props
 }: ComponentProps<typeof Link> & StyleProps) {
-  return <Link className={buttonClass(variant, size, className)} {...props} />
+  return (
+    <Link className={buttonClass(variant, size, className, shape)} {...props} />
+  )
 }

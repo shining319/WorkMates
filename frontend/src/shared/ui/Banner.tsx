@@ -1,7 +1,13 @@
-import { CircleAlert, Info, TriangleAlert, type LucideIcon } from 'lucide-react'
+import {
+  CircleAlert,
+  CircleCheck,
+  Info,
+  TriangleAlert,
+  type LucideIcon,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 
-type Tone = 'danger' | 'info' | 'warning'
+type Tone = 'danger' | 'info' | 'warning' | 'success'
 
 // 每种语气对应一个图标和一组颜色。图标加文字，不只靠颜色区分。
 const toneStyle: Record<Tone, { icon: LucideIcon; className: string }> = {
@@ -10,6 +16,10 @@ const toneStyle: Record<Tone, { icon: LucideIcon; className: string }> = {
   warning: {
     icon: TriangleAlert,
     className: 'bg-warning-bg text-warning-text',
+  },
+  success: {
+    icon: CircleCheck,
+    className: 'bg-success-bg text-success-text',
   },
 }
 
