@@ -18,6 +18,30 @@ export const AREA_LABEL: Record<Area, string> = {
   REMOTE: 'Remote',
 }
 
+// 和后端枚举 ApplicationStatus 一一对应（application.entity）。
+export const APPLICATION_STATUS_VALUES = [
+  'APPLIED',
+  'REVIEWED',
+  'INTERVIEW',
+  'OFFER',
+  'ACCEPTED',
+  'DECLINED',
+  'REJECTED',
+  'COMPLETED',
+] as const
+export type ApplicationStatus = (typeof APPLICATION_STATUS_VALUES)[number]
+
+export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
+  APPLIED: 'Applied',
+  REVIEWED: 'Reviewed',
+  INTERVIEW: 'Interview',
+  OFFER: 'Offer',
+  ACCEPTED: 'Accepted',
+  DECLINED: 'Declined',
+  REJECTED: 'Rejected',
+  COMPLETED: 'Completed',
+}
+
 // 下拉框、分段选择用的 { value, label } 列表
 export const JOB_TYPE_OPTIONS = JOB_TYPE_VALUES.map((value) => ({
   value,

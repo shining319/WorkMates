@@ -1,6 +1,6 @@
 import { Search, SlidersHorizontal } from 'lucide-react'
 import { useCallback, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import {
   AREA_LABEL,
   AREA_VALUES,
@@ -50,7 +50,8 @@ function EmptyState({ onClear }: { onClear: () => void }) {
   )
 }
 
-// 学生的职位列表（设计 04 / 04b / 17，US 3.1、3.2）。
+// 学生的职位列表（设计 04 / 04b / 17，US 3.1–3.3）。
+// 后端按匹配度排序（同分新的在前），卡片显示匹配度；档案不完整时，列表上方提示去补档案。
 // 关键词、筛选条件和页码都放在网址里：
 //   /jobs?keyword=barista&areas=ATHLONE,REMOTE&types=PART_TIME&minRate=12&fitsMyTime=true&page=2
 // 所以后退、刷新、复制链接给别人，看到的都是同一个结果。网址里的页码从 1 开始，接口从 0 开始。
@@ -167,6 +168,19 @@ export function JobsPage() {
     <div className="flex flex-col gap-5">
       <h1 className="text-h2">Jobs</h1>
 
+      {profile.data && !profile.data.complete && (
+        <Banner
+          tone="warning"
+          action={
+            <Link to="/profile" className="font-medium underline">
+              Complete profile
+            </Link>
+          }
+        >
+          Complete your profile to get better matches
+        </Banner>
+      )}
+
       {/* 桌面：左栏筛选，右边搜索和结果。手机：一列，筛选面板在搜索框下面，点 Filters 展开 */}
       <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 md:grid-cols-[220px_minmax(0,1fr)] md:grid-rows-[auto_1fr] md:items-start">
         <div className="flex gap-2 md:col-start-2 md:row-start-1">
@@ -225,7 +239,7 @@ export function JobsPage() {
           <div className="flex flex-wrap items-center gap-2">
             {data && !jobs.isError && total > 0 && (
               <span className="text-caption text-text-muted">
-                {total} {total === 1 ? 'job' : 'jobs'} · newest first
+                {total} {total === 1 ? 'job' : 'jobs'} · best match first
               </span>
             )}
             {chips.map((chip) => (
@@ -276,6 +290,7 @@ export function JobsPage() {
                       weeklyHours={job.weeklyHours}
                       area={job.area}
                       postedAt={formatDate(job.createdAt)}
+                      matchPercent={job.matchPercent}
                     />
                   </li>
                 ))}

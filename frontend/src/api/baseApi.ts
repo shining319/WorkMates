@@ -96,6 +96,9 @@ export const baseApi = createApi({
   // 标签用来在数据变化后让相关查询自动重新请求。哪个功能用到，就在这里加哪个标签。
   // JobList 现在还没有人读，学生保存档案时先让它失效，职位列表做的时候直接接上。
   // Posting：单个职位（按 id）；MyPostings：雇主的职位列表。
+  // Applicants：某个职位的申请人列表和申请人详情；Application：单个申请（按 id）；
+  // MyApplications：学生的申请列表。这三个在申请状态改变后一起失效。
+  // Notifications：通知列表；UnreadCount：铃铛上的未读数。标为已读后两个一起失效。
   tagTypes: [
     'Me',
     'StudentProfile',
@@ -103,6 +106,11 @@ export const baseApi = createApi({
     'JobList',
     'Posting',
     'MyPostings',
+    'Applicants',
+    'Application',
+    'MyApplications',
+    'Notifications',
+    'UnreadCount',
   ],
   endpoints: () => ({}),
 })

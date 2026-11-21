@@ -2,6 +2,7 @@ package com.workmates.posting.service;
 
 import com.workmates.application.dto.PostingCounts;
 import com.workmates.application.service.ApplicationQueryService;
+import com.workmates.application.service.HeadcountService;
 import com.workmates.common.BusinessException;
 import com.workmates.common.ErrorCode;
 import com.workmates.common.timeslot.TimeSlot;
@@ -38,13 +39,15 @@ public class PostingService {
     private final TagService tags;
     private final ApplicationQueryService applications;
     private final EmployerProfileRepository employers;
+    private final HeadcountService headcount;
 
     public PostingService(PostingRepository postings, TagService tags, ApplicationQueryService applications,
-                          EmployerProfileRepository employers) {
+                          EmployerProfileRepository employers, HeadcountService headcount) {
         this.postings = postings;
         this.tags = tags;
         this.applications = applications;
         this.employers = employers;
+        this.headcount = headcount;
     }
 
     /** Saves a new posting for the employer. It starts as {@code OPEN}. */
@@ -89,7 +92,8 @@ public class PostingService {
                     ErrorCode.HEADCOUNT_BELOW_FILLED.getDefaultMessage() + " (" + counts.hired() + ")");
         }
         fill(posting, request);
-        // TODO(B4.5.2): when the new headcount equals counts.hired(), close the posting as FILLED (closeIfFilled).
+        // Closes the posting as FILLED when the new headcount equals the hired count (same transaction)
+        headcount.closeIfFilled(posting);
         return PostingResponse.from(posting);
     }
 

@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import com.workmates.application.dto.PostingCounts;
 import com.workmates.application.service.ApplicationQueryService;
+import com.workmates.application.service.HeadcountService;
 import com.workmates.common.BusinessException;
 import com.workmates.common.ErrorCode;
 import com.workmates.common.timeslot.TimeSlotDto;
@@ -62,8 +63,9 @@ class PostingServiceTest {
     private final TagRepository tagRepository = mock(TagRepository.class);
     private final ApplicationQueryService applications = mock(ApplicationQueryService.class);
     private final EmployerProfileRepository employers = mock(EmployerProfileRepository.class);
+    private final HeadcountService headcount = mock(HeadcountService.class);
     private final PostingService service =
-            new PostingService(postings, new TagService(tagRepository), applications, employers);
+            new PostingService(postings, new TagService(tagRepository), applications, employers, headcount);
 
     @BeforeEach
     void setUp() {
@@ -365,14 +367,15 @@ class PostingServiceTest {
     }
 
     @Test
-    void headcountEqualToTheHiredCountIsAllowedAndKeepsThePostingOpen() {
+    void headcountEqualToTheHiredCountIsAllowedAndHandedToCloseIfFilled() {
         Posting posting = existingPosting(PostingStatus.OPEN);
         hired(2, 1);
 
         service.update(EMPLOYER_ID, POSTING_ID, request());
 
         assertEquals(2, posting.getHeadcount());
-        assertEquals(PostingStatus.OPEN, posting.getStatus());
+        // The mock does not close it; closing itself is covered by HeadcountServiceTest
+        verify(headcount).closeIfFilled(posting);
     }
 
     @Test
@@ -385,6 +388,19 @@ class PostingServiceTest {
         service.update(EMPLOYER_ID, POSTING_ID, r);
 
         assertEquals(10, posting.getHeadcount());
+        verify(headcount).closeIfFilled(posting);
+    }
+
+    @Test
+    void rejectedUpdateNeverCallsCloseIfFilled() {
+        existingPosting(PostingStatus.OPEN);
+        hired(3, 0);
+        PostingRequest r = request();
+        r.setHeadcount(2);
+
+        assertThrows(BusinessException.class, () -> service.update(EMPLOYER_ID, POSTING_ID, r));
+
+        verify(headcount, never()).closeIfFilled(any());
     }
 
     @Test

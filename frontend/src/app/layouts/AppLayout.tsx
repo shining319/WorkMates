@@ -1,17 +1,19 @@
 import { NavLink, Outlet } from 'react-router'
 import { logout } from '../../features/auth/authSlice'
+import { NotificationBell } from '../../features/notifications/components/NotificationBell'
 import { Button } from '../../shared/ui/Button'
 import { useAppDispatch, useAppSelector } from '../store'
 
 // NavLink 的 className 可以传函数：isActive 为 true 表示当前网址就是这个链接，
 // 此时用高亮样式，否则用普通样式。
+// whitespace-nowrap：窄屏时链接文字不折成两行，放不下时整个导航换到下一行
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   isActive
-    ? 'font-semibold text-text-strong'
-    : 'text-text-muted hover:text-text'
+    ? 'font-semibold whitespace-nowrap text-text-strong'
+    : 'whitespace-nowrap text-text-muted hover:text-text'
 
 // 登录后所有页面的外壳：页头（导航 + 退出按钮）加下面的页面内容。
-// 每做一个功能，就在这里加一个导航入口。通知铃铛也加在这里。
+// 每做一个功能，就在这里加一个导航入口。右边是通知铃铛（两种角色都有）和退出按钮。
 export function AppLayout() {
   const role = useAppSelector((state) => state.auth.user?.role)
   const dispatch = useAppDispatch()
@@ -23,12 +25,19 @@ export function AppLayout() {
           <span className="text-[17px] font-bold tracking-[-0.3px] text-text-strong">
             WorkMates
           </span>
-          <nav aria-label="Main" className="flex flex-1 gap-4 text-sm">
+          {/* 手机上导航排到第二行、占满整行（order-last w-full），桌面放回中间 */}
+          <nav
+            aria-label="Main"
+            className="order-last flex w-full flex-wrap gap-x-4 text-sm sm:order-none sm:w-auto sm:flex-1"
+          >
             {/* 按角色显示不同的导航：学生看到 Jobs，雇主看到 Postings */}
             {role === 'STUDENT' && (
               <>
                 <NavLink to="/jobs" className={navLinkClass}>
                   Jobs
+                </NavLink>
+                <NavLink to="/applications" className={navLinkClass}>
+                  My applications
                 </NavLink>
                 <NavLink to="/profile" className={navLinkClass}>
                   Profile
@@ -46,10 +55,14 @@ export function AppLayout() {
               </>
             )}
           </nav>
-          {/* 退出登录：logout 动作会清掉令牌、用户和所有缓存 */}
-          <Button variant="utility" onClick={() => dispatch(logout())}>
-            Log out
-          </Button>
+          {/* 手机上铃铛和退出按钮一起靠右。gap-4：铃铛的数字往右变宽时会伸出铃铛，"99+" 时离 Log out 还有 6px */}
+          <div className="ml-auto flex items-center gap-4 sm:ml-0">
+            <NotificationBell />
+            {/* 退出登录：logout 动作会清掉令牌、用户和所有缓存 */}
+            <Button variant="utility" onClick={() => dispatch(logout())}>
+              Log out
+            </Button>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-4 py-6">

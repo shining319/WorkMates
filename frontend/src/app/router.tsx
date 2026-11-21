@@ -4,17 +4,21 @@ import { PublicLayout } from './layouts/PublicLayout'
 import { LandingPage } from '../features/auth/pages/LandingPage'
 import { LoginPage } from '../features/auth/pages/LoginPage'
 import { RegisterPage } from '../features/auth/pages/RegisterPage'
+import { ApplicationDetailPage } from '../features/applications/pages/ApplicationDetailPage'
+import { MyApplicationsPage } from '../features/applications/pages/MyApplicationsPage'
+import { JobDetailPage } from '../features/jobs/pages/JobDetailPage'
 import { JobsPage } from '../features/jobs/pages/JobsPage'
+import { NotificationsPage } from '../features/notifications/pages/NotificationsPage'
 import { EmployerProfilePage } from '../features/profile/pages/EmployerProfilePage'
 import { StudentProfilePage } from '../features/profile/pages/StudentProfilePage'
+import { ApplicantDetailPage } from '../features/postings/pages/ApplicantDetailPage'
+import { ApplicantsPage } from '../features/postings/pages/ApplicantsPage'
 import { MyPostingsPage } from '../features/postings/pages/MyPostingsPage'
 import { PostingDetailPage } from '../features/postings/pages/PostingDetailPage'
 import { PostingFormPage } from '../features/postings/pages/PostingFormPage'
-import { PlaceholderPage } from './PlaceholderPage'
 import { RequireRole } from './RequireRole'
 
-// 路由表。目前只有注册和角色要用的几个路由，每个功能做的时候再按架构文档 §9.5 补自己的路由，
-// 并把 PlaceholderPage（占位页）换成真正的页面。
+// 路由表。每个功能做的时候按架构文档 §9.5 补自己的路由。
 //
 // 怎么读：没有 `path` 只有 `element` 的项是"外壳"，它不对应网址，
 // 只是把 `children` 包起来。外壳里的 <Outlet /> 就是子路由页面显示的位置。
@@ -41,16 +45,16 @@ export const router = createBrowserRouter([
       {
         element: <AppLayout />,
         children: [
+          // 两种角色都能进
+          { path: '/notifications', element: <NotificationsPage /> },
           {
             // 第二层守卫：只有学生能进
             element: <RequireRole allowed="STUDENT" />,
             children: [
               { path: '/jobs', element: <JobsPage /> },
-              {
-                // 职位详情是 US 3.4，先占位，让列表里卡片的链接有地方去
-                path: '/jobs/:id',
-                element: <PlaceholderPage title="Job detail" />,
-              },
+              { path: '/jobs/:id', element: <JobDetailPage /> },
+              { path: '/applications', element: <MyApplicationsPage /> },
+              { path: '/applications/:id', element: <ApplicationDetailPage /> },
               { path: '/profile', element: <StudentProfilePage /> },
             ],
           },
@@ -62,10 +66,10 @@ export const router = createBrowserRouter([
               { path: '/postings/new', element: <PostingFormPage /> },
               { path: '/postings/:id', element: <PostingDetailPage /> },
               { path: '/postings/:id/edit', element: <PostingFormPage /> },
+              { path: '/postings/:id/applicants', element: <ApplicantsPage /> },
               {
-                // 申请人列表是 US 4.2，先占位，让列表和详情里的 Applicants 链接有地方去
-                path: '/postings/:id/applicants',
-                element: <PlaceholderPage title="Applicants" />,
+                path: '/postings/:id/applicants/:applicationId',
+                element: <ApplicantDetailPage />,
               },
               { path: '/employer/profile', element: <EmployerProfilePage /> },
             ],

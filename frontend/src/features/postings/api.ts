@@ -1,6 +1,10 @@
 import { baseApi } from '../../api/baseApi'
 import type { Paged } from '../../api/types'
+import type { ApplicationStatus } from '../../shared/lib/constants'
 import type {
+  ApplicantDetail,
+  ApplicantRow,
+  ApplicantSort,
   Posting,
   PostingDetail,
   PostingListItem,
@@ -52,6 +56,33 @@ export const postingsApi = baseApi.injectEndpoints({
         'JobList',
       ],
     }),
+
+    // 某个职位的申请人，只有职位所有者能看（别人的返回 404）。每页 20 条，page 从 0 开始。
+    // statuses 可以有多个（Hired = Accepted + Completed），用逗号拼成一个 status 参数；不传就是全部。
+    getApplicants: build.query<
+      Paged<ApplicantRow>,
+      {
+        postingId: number
+        statuses?: ApplicationStatus[]
+        sortBy: ApplicantSort
+        page: number
+      }
+    >({
+      query: ({ postingId, statuses, sortBy, page }) => ({
+        url: `/postings/${postingId}/applicants`,
+        params: { status: statuses?.join(','), sortBy, page },
+      }),
+      providesTags: ['Applicants'],
+    }),
+
+    getApplicant: build.query<
+      ApplicantDetail,
+      { postingId: number; applicationId: number }
+    >({
+      query: ({ postingId, applicationId }) =>
+        `/postings/${postingId}/applicants/${applicationId}`,
+      providesTags: ['Applicants'],
+    }),
   }),
 })
 
@@ -61,4 +92,6 @@ export const {
   useCreatePostingMutation,
   useUpdatePostingMutation,
   useClosePostingMutation,
+  useGetApplicantsQuery,
+  useGetApplicantQuery,
 } = postingsApi

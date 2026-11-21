@@ -15,6 +15,7 @@ import com.workmates.posting.entity.JobType;
 import com.workmates.posting.entity.PostingStatus;
 import com.workmates.posting.service.PostingSearchService;
 import com.workmates.posting.service.PostingService;
+import com.workmates.posting.service.StudentPostingDetailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -74,7 +75,7 @@ public class PostingController {
     /** Schema-only class for Swagger, like {@link PostingResult}. */
     @Schema(description = "One page of job cards")
     private static class JobSearchResult extends Result<List<JobCardResponse>> {
-        @Schema(description = "The job cards on this page, newest first")
+        @Schema(description = "The job cards on this page, ranked by exact match score then newest")
         @Override
         public List<JobCardResponse> getData() {
             return super.getData();
@@ -83,15 +84,18 @@ public class PostingController {
 
     private final PostingService service;
     private final PostingSearchService searchService;
+    private final StudentPostingDetailService studentDetails;
 
-    public PostingController(PostingService service, PostingSearchService searchService) {
+    public PostingController(PostingService service, PostingSearchService searchService,
+                             StudentPostingDetailService studentDetails) {
         this.service = service;
         this.searchService = searchService;
+        this.studentDetails = studentDetails;
     }
 
     @GetMapping
     @RequireRole(Role.STUDENT)
-    @Operation(summary = "Search open postings, newest first, 20 per page. All filters are optional and combine with AND.")
+    @Operation(summary = "Search open postings, highest match score then newest first, 20 per page; US 3.2 filters still apply.")
     @ApiResponse(responseCode = "200", description = "One page of job cards",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = JobSearchResult.class)))
     @ApiResponse(responseCode = "400", description = "VALIDATION_FAILED (invalid area, type, minRate or page)",
@@ -154,15 +158,16 @@ public class PostingController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Posting detail with the employer's name and bio and the application counts. Closed postings too.")
+    @Operation(summary = "Posting detail including student match breakdown and application status. Closed postings too.")
     @ApiResponse(responseCode = "200", description = "The posting",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = PostingDetailResult.class)))
     @ApiResponse(responseCode = "401", description = "UNAUTHORIZED",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
     @ApiResponse(responseCode = "404", description = "NOT_FOUND",
             content = @Content(mediaType = "application/json", schema = @Schema(implementation = Result.class)))
-    public Result<PostingDetailResponse> get(@PathVariable Long id) {
-        return Result.ok(service.get(id));
+    public Result<PostingDetailResponse> get(CurrentUser user, @PathVariable Long id) {
+        return Result.ok(user.getRole() == Role.STUDENT
+                ? studentDetails.get(user.getId(), id) : service.get(id));
     }
 
     @PutMapping("/{id}")

@@ -2,7 +2,6 @@ package com.workmates.posting.service;
 
 import com.workmates.common.BusinessException;
 import com.workmates.common.ErrorCode;
-import com.workmates.common.timeslot.TimeSlot;
 import com.workmates.matching.MatchScoreCalculator;
 import com.workmates.posting.dto.JobCardResponse;
 import com.workmates.posting.entity.Area;
@@ -10,6 +9,7 @@ import com.workmates.posting.entity.JobType;
 import com.workmates.posting.entity.Posting;
 import com.workmates.posting.entity.PostingStatus;
 import com.workmates.posting.repository.PostingRepository;
+import com.workmates.profile.dto.StudentMatchInput;
 import com.workmates.profile.entity.EmployerProfile;
 import com.workmates.profile.entity.Tag;
 import com.workmates.profile.repository.EmployerProfileRepository;
@@ -20,6 +20,7 @@ import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -32,8 +33,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Student job search (architecture section 8.1). SQL does the hard filters; the "fits my time" filter and
- * the paging happen in memory, so that ranking by match score (US 3.3) can use the same path.
+ * Student job search. US 3.2 SQL filters and the "fits my time" rule are preserved;
+ * US 3.3 ranks the filtered result by full-precision match score BEFORE paging.
  */
 @Service
 public class PostingSearchService {
@@ -57,28 +58,41 @@ public class PostingSearchService {
         this.students = students;
     }
 
-    /** One page of open postings that pass every filter, newest first. */
+    private record RankedPosting(Posting posting, MatchScoreCalculator.MatchScore match) {}
+
+    /** One page of open postings that pass every filter, best match first then newest. */
     @Transactional(readOnly = true)
     public Page<JobCardResponse> search(Long studentId, Filters filters, int page) {
         if (page < 0) {
             throw new BusinessException(ErrorCode.VALIDATION_FAILED, "page must be 0 or more");
         }
         List<Posting> found = postings.findAll(specification(filters), PostingService.NEWEST_FIRST);
-        if (filters.fitsMyTime()) {
-            List<TimeSlot> freeSlots = students.matchInput(studentId).getTimeSlots();
-            found = found.stream()
-                    .filter(p -> MatchScoreCalculator.timeMatch(freeSlots, p.getTimeSlots()).score() >= FITS_MY_TIME_MIN)
-                    .toList();
-        }
-        int from = (int) Math.min((long) page * PostingService.PAGE_SIZE, found.size());
-        List<Posting> onPage = found.subList(from, Math.min(from + PostingService.PAGE_SIZE, found.size()));
+        // Always read the latest student profile: profile changes affect the very next search.
+        // A missing input part scores 0 rather than failing the entire ranking calculation.
+        StudentMatchInput student = students.matchInput(studentId);
+        List<RankedPosting> ranked = found.stream()
+                .map(posting -> new RankedPosting(posting, MatchScoreCalculator.calculate(student, posting)))
+                .filter(item -> !filters.fitsMyTime()
+                        || item.match().timeScore() >= FITS_MY_TIME_MIN)
+                .sorted(Comparator
+                        .comparingDouble((RankedPosting item) -> item.match().overallScore()).reversed()
+                        .thenComparing(item -> item.posting().getCreatedAt(),
+                                Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(item -> item.posting().getId(),
+                                Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
 
+        int from = (int) Math.min((long) page * PostingService.PAGE_SIZE, ranked.size());
+        List<RankedPosting> onPage = ranked.subList(from,
+                Math.min(from + PostingService.PAGE_SIZE, ranked.size()));
         Map<Long, String> employerNames = employers
-                .findAllById(onPage.stream().map(Posting::getEmployerId).distinct().toList()).stream()
-                .collect(Collectors.toMap(EmployerProfile::getUserId, EmployerProfile::getDisplayName));
+                .findAllById(onPage.stream().map(item -> item.posting().getEmployerId()).distinct().toList())
+                .stream().collect(Collectors.toMap(EmployerProfile::getUserId, EmployerProfile::getDisplayName));
         List<JobCardResponse> cards = onPage.stream()
-                .map(p -> JobCardResponse.from(p, employerNames.get(p.getEmployerId()))).toList();
-        return new PageImpl<>(cards, PageRequest.of(page, PostingService.PAGE_SIZE), found.size());
+                .map(item -> JobCardResponse.from(item.posting(),
+                        employerNames.get(item.posting().getEmployerId()), item.match().matchPercent()))
+                .toList();
+        return new PageImpl<>(cards, PageRequest.of(page, PostingService.PAGE_SIZE), ranked.size());
     }
 
     private static Specification<Posting> specification(Filters filters) {

@@ -25,8 +25,10 @@ public class JobCardResponse {
     private Area area;
     @Schema(description = "When the posting was created")
     private Instant createdAt;
+    @Schema(description = "Student match percentage from 0 to 100", example = "73")
+    private int matchPercent;
 
-    public static JobCardResponse from(Posting posting, String employerName) {
+    public static JobCardResponse from(Posting posting, String employerName, int matchPercent) {
         JobCardResponse response = new JobCardResponse();
         response.id = posting.getId();
         response.title = posting.getTitle();
@@ -36,6 +38,7 @@ public class JobCardResponse {
         response.weeklyHours = posting.getWeeklyHours();
         response.area = posting.getArea();
         response.createdAt = posting.getCreatedAt();
+        response.matchPercent = matchPercent;
         return response;
     }
 
@@ -47,4 +50,5 @@ public class JobCardResponse {
     public BigDecimal getWeeklyHours() { return weeklyHours; }
     public Area getArea() { return area; }
     public Instant getCreatedAt() { return createdAt; }
+    public int getMatchPercent() { return matchPercent; }
 }
