@@ -52,5 +52,7 @@ export const applicationsApi = baseApi.injectEndpoints({
 export const {
   useGetMyApplicationsQuery,
   useGetApplicationQuery,
+  // 通知中心：雇主点申请类通知时，先查申请拿到职位 ID 再跳转
+  useLazyGetApplicationQuery,
   useChangeApplicationStatusMutation,
 } = applicationsApi

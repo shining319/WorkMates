@@ -40,3 +40,25 @@ export function formatDateTime(iso: string): string {
 export function formatHours(hours: number): string {
   return String(Number(hours.toFixed(1)))
 }
+
+const dublinDay = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Dublin',
+})
+
+/**
+ * 通知时间（设计 10）：1 分钟内 "Just now"，1 小时内 "12 min ago"，24 小时内 "2 h ago"，
+ * 都柏林时间的昨天 "Yesterday, 14:02"，更早 "12 Sep"。`now` 只在测试或特殊场合传。
+ */
+export function formatRelativeTime(iso: string, now = new Date()): string {
+  const date = new Date(iso)
+  const minutes = Math.floor((now.getTime() - date.getTime()) / 60_000)
+  if (minutes < 1) return 'Just now'
+  if (minutes < 60) return `${minutes} min ago`
+  if (minutes < 24 * 60) return `${Math.floor(minutes / 60)} h ago`
+  // en-CA 的日期格式是 2026-09-12，用来比较是不是同一天
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60_000)
+  if (dublinDay.format(date) === dublinDay.format(yesterday)) {
+    return `Yesterday, ${dublinTime.format(date)}`
+  }
+  return formatDate(iso)
+}
